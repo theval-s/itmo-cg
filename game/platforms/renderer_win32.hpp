@@ -16,6 +16,7 @@ public:
     IDXGISwapChain *swapChain = nullptr; //use ComPtr's too or not necessary?
     ID3D11DeviceContext *deviceContext = nullptr;
     ID3D11Texture2D *backBuffer = nullptr;
+    ID3D11DepthStencilView *depthStencilView = nullptr;
 
     ID3D11RenderTargetView *renderTargetView = nullptr;
 

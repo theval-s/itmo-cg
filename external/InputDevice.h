@@ -8,11 +8,13 @@
 
 namespace val_cg {
 	class Game;
+	class Display32;
 
 
 	class GAMEFRAMEWORK_API InputDevice
 	{
 		friend class Game;
+		friend class Display32;
 
 		Game* game;
 
@@ -113,6 +115,7 @@ namespace val_cg {
 			int Y;
 		};
 
+	public:
 		void OnKeyDown(KeyboardInputEventArgs args);
 		void OnMouseMove(RawMouseEventArgs args);
 	};

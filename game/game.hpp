@@ -6,8 +6,9 @@
 #include <chrono>
 
 #include "game_component.hpp"
-//#include "InputDevice.h"
+#include "InputDevice.h"
 #include "platforms/renderer_win32.hpp"
+#include "components/camera_component.hpp"
 #include "../exports.h"
 
 namespace val_cg {
@@ -24,11 +25,9 @@ namespace val_cg {
     private:
         //TODO: reconsider win32 parts?
 
-
-        //input device
-
     public:
         Game(LPCWSTR applicationName=L"Game", int clientWidth=800, int clientHeight=600);
+        ~Game();
 
         void DestroyResources();
         void Draw();
@@ -38,7 +37,10 @@ namespace val_cg {
         void MessageHandler();
         void Initialize();
         void Scored();
-        //InputDevice* InputHandler() const;
+        void CreateCamera();
+        CameraData GetCameraData() const { return camera->GetCameraData();};
+        bool IsCameraCreated() const { return isCameraCreated; }
+        InputDevice* InputHandler() const;
 
     private:
         void UpdateInternal();
@@ -47,6 +49,9 @@ namespace val_cg {
     private:
         bool isExitRequested = false;
         int score = 0;
-        //InputDevice* inputDevice;
+        bool isCameraCreated = false;
+
+        CameraComponent* camera = nullptr;
+        InputDevice* inputDevice = nullptr;
     };
 } // val_cg

@@ -21,7 +21,7 @@ namespace val_cg {
             Top,
             Bottom
         };
-        ID3D11Buffer* constantBuffer;
+        ID3D11Buffer* constantBuffer = nullptr;
         DirectX::BoundingBox collider;
 
 

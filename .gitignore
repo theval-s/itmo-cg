@@ -3,3 +3,5 @@ cmake-build*
 *.ilk
 *.pdb
 .idea
+.vs*
+out

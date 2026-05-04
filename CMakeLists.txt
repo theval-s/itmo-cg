@@ -10,9 +10,14 @@ add_executable(itmo_cg main.cpp
         game/components/triangle_component.cpp
         game/components/paddle_component.cpp
         game/components/ball_component.cpp
+        game/components/3d/mesh_component.cpp
         game/platforms/display_win32.cpp
         game/platforms/renderer_win32.cpp
-        external/Delegates.cpp)
+        external/InputDevice.cpp
+        external/Delegates.cpp
+        game/components/3d/planet_component.cpp
+        game/components/camera_component.cpp
+        game/utils/geometry_generator.cpp)
 
 target_include_directories(itmo_cg PRIVATE external game)
 target_link_libraries(itmo_cg

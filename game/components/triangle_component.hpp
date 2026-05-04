@@ -10,6 +10,7 @@
 
 #include "../game_component.hpp"
 #include "consts.hpp"
+#include "common_structs.h"
 #include "d3d11.h"
 
 
@@ -30,7 +31,7 @@ namespace val_cg
         std::vector<int> indices;
     public:
         ///@param inputPoints vertices in format (xmfloat4)Position (xmfloat4)Color
-        TriangleComponent(Game* game, std::span<const DirectX::XMFLOAT4> inputPoints = {}, std::span<const int> inputIndices = {});
+        explicit TriangleComponent(Game* game, std::span<const DirectX::XMFLOAT4> inputPoints = {}, std::span<const int> inputIndices = {});
 
         void Initialize() override;
         void Draw() override;

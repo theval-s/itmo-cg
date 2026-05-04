@@ -7,6 +7,7 @@
 #include <windows.h>
 #include <string>
 
+#include "InputDevice.h"
 
 
 class DisplayWin32 {
@@ -25,4 +26,5 @@ public:
     HWND GetWindowHandle() const {
         return hWnd;
     }
+    static val_cg::InputDevice* mInputDevice;
 };

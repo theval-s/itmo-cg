@@ -10,7 +10,15 @@ namespace val_cg {
     Game::Game(LPCWSTR applicationName, int clientWidth, int clientHeight)
         : renderer(clientWidth, clientHeight)
     {
-        //inputDevice = new InputDevice(this);
+        CreateCamera();
+        inputDevice = new InputDevice(this);
+        DisplayWin32::mInputDevice = inputDevice;
+    }
+
+    Game::~Game() {
+        DestroyResources();
+        delete inputDevice;
+        delete camera;
     }
 
     void Game::DestroyResources() {
@@ -20,9 +28,10 @@ namespace val_cg {
     }
 
     void Game::Draw() {
-        renderer.deviceContext->OMSetRenderTargets(1, &renderer.renderTargetView, nullptr);
+        renderer.deviceContext->OMSetRenderTargets(1, &renderer.renderTargetView, /*nullptr);*/renderer.depthStencilView);
         const float color[] = { 0.f, 0.f, 0.f, 1.0f };
-        renderer.deviceContext->ClearRenderTargetView(renderer.renderTargetView, color);
+        renderer.deviceContext->ClearRenderTargetView(renderer.renderTargetView, color); //todo: move out to renderer method?
+        renderer.deviceContext->ClearDepthStencilView(renderer.depthStencilView,D3D11_CLEAR_DEPTH, 1.f, 0.f);
 
         for (auto& comp : Components) {
             comp->Draw();
@@ -69,6 +78,7 @@ namespace val_cg {
     }
 
     void Game::Update(float deltaTime) const {
+        camera->Update(deltaTime);
         for (auto& comp : Components) {
             comp->Update(deltaTime);
         }
@@ -101,9 +111,15 @@ namespace val_cg {
         std::cout<<"Scored: "<<score<<std::endl;
     }
 
-    // InputDevice* Game::InputHandler() const {
-    //     return inputDevice;
-    // }
+    void Game::CreateCamera() {
+        camera = new CameraComponent(this);
+        camera->SetPosition({-10.f,0.f,1.5f});
+        camera->Initialize();
+    }
+
+    InputDevice* Game::InputHandler() const {
+        return inputDevice;
+    }
 
     void Game::UpdateInternal() {
         //todo???
