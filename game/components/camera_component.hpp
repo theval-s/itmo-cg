@@ -4,6 +4,7 @@
 
 #pragma once
 #include "game_component.hpp"
+#include "InputDevice.h"
 #include "SimpleMath.h"
 
 namespace val_cg {
@@ -22,6 +23,8 @@ namespace val_cg {
         //void Draw() override;  //??? instead we just draw using camera view matrix
         void Update(float deltaTime) override;
         [[nodiscard]] CameraData GetCameraData() const;
+
+        void OnMouseMove(const InputDevice::MouseMoveEventArgs& args);
 
     public:
         DirectX::SimpleMath::Matrix viewMatrix;

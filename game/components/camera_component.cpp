@@ -23,14 +23,19 @@ void val_cg::CameraComponent::SetPosition(const Vector3 &position) {
 
 void val_cg::CameraComponent::Initialize() {
     GameComponent::Initialize();
+    auto input = game->InputHandler();
+    if (input) {
+        std::cout << "Added delegate subscription\n";
+        input->MouseMove.AddLambda([this](const InputDevice::MouseMoveEventArgs& args) {
+            this->OnMouseMove(args);
+        });
+    }
 }
 
 void val_cg::CameraComponent::Update(float deltaTime) {
     auto input = game->InputHandler();
     if (!input) return;
 
-    cameraRotation.y -= input->MouseOffset.x * 0.005f; //todo: extract mouse speed value
-    cameraRotation.x -= input->MouseOffset.y * 0.005f;
     auto rot = Matrix::CreateFromYawPitchRoll(cameraRotation);
 
     if (input->IsKeyDown(Keys::W)) {
@@ -51,4 +56,11 @@ void val_cg::CameraComponent::Update(float deltaTime) {
 
 val_cg::CameraData val_cg::CameraComponent::GetCameraData() const {
     return {viewMatrix, projMatrix};
+}
+
+void val_cg::CameraComponent::OnMouseMove(const InputDevice::MouseMoveEventArgs &args) {
+    float mouseSpeed = 0.005f;
+    //yes, y-x and x-y is right
+    cameraRotation.y -= args.Offset.x * mouseSpeed;
+    cameraRotation.x -= args.Offset.y * mouseSpeed;
 }

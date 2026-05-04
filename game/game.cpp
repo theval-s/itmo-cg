@@ -101,6 +101,7 @@ namespace val_cg {
     }
 
     void Game::Initialize() {
+        if (camera) camera->Initialize();
         for (auto& comp : Components) {
             comp->Initialize();
         }
