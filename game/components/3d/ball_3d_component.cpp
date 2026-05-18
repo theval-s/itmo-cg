@@ -15,14 +15,15 @@ namespace val_cg {
     Ball3DComponent::Ball3DComponent(Game *game)
         : MeshComponent(game) {
         MeshData mesh = GeometryGenerator::CreateSphere(radius, 12, 12, {1.f, 1.f, 1.f, 1.f});
-        points.reserve(mesh.vertices.size() * 2);
-        for (const auto &v: mesh.vertices) {
-            points.push_back(v.position);
-            points.push_back(v.color);
+        std::vector<DirectX::XMFLOAT4> tempPoints;
+        tempPoints.reserve(mesh.vertices.size()*2);
+        for (const auto& v : mesh.vertices) {
+            tempPoints.push_back(v.position);
+            tempPoints.push_back(v.color);
         }
-        indices = mesh.indices;
+        this->points = tempPoints;
+        this->indices = mesh.indices;
         Reset();
-        worldMatrix = Matrix::CreateTranslation(position);
     }
 
     void Ball3DComponent::Initialize() {

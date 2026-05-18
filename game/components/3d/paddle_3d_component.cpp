@@ -19,12 +19,14 @@ namespace val_cg {
                                       ? DirectX::XMFLOAT4(1.f, 0.2f, 0.2f, 1.f)
                                       : DirectX::XMFLOAT4(0.2f, 0.2f, 1.f, 1.f);
         MeshData mesh = GeometryGenerator::CreateBox(halfD, halfH, halfD, color);
-        points.reserve(mesh.vertices.size() * 2);
-        for (const auto &v: mesh.vertices) {
-            points.push_back(v.position);
-            points.push_back(v.color);
+        std::vector<DirectX::XMFLOAT4> tempPoints;
+        tempPoints.reserve(mesh.vertices.size()*2);
+        for (const auto& v : mesh.vertices) {
+            tempPoints.push_back(v.position);
+            tempPoints.push_back(v.color);
         }
-        indices = mesh.indices;
+        this->points = tempPoints;
+        this->indices = mesh.indices;
         worldMatrix = Matrix::CreateTranslation(position);
     }
 
