@@ -38,7 +38,8 @@ namespace val_cg {
         void Initialize();
         void Scored();
         void CreateCamera();
-        CameraData GetCameraData() const { return camera->GetCameraData();};
+        CameraData GetCameraData() const { return camera->GetCameraData();}
+        //CameraComponent* GetCamera() { return camera; }
         bool IsCameraCreated() const { return isCameraCreated; }
         InputDevice* InputHandler() const;
 

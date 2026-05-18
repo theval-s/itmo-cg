@@ -76,12 +76,12 @@ namespace val_cg {
 
 		const MouseMoveEventArgs moveArgs = {MousePosition, MouseOffset, MouseWheelDelta};
 
-		//printf(" Mouse: posX=%04.4f posY:%04.4f offsetX:%04.4f offsetY:%04.4f, wheelDelta=%04d \n",
-		//	MousePosition.x,
-		//	MousePosition.y,
-		//	MouseOffset.x,
-		//	MouseOffset.y,
-		//	MouseWheelDelta);
+		printf(" Mouse: posX=%04.4f posY:%04.4f offsetX:%04.4f offsetY:%04.4f, wheelDelta=%04d \n",
+			MousePosition.x,
+			MousePosition.y,
+			MouseOffset.x,
+			MouseOffset.y,
+			MouseWheelDelta);
 
 		MouseMove.Broadcast(moveArgs);
 	}

@@ -14,5 +14,6 @@ namespace val_cg {
     class GeometryGenerator {
     public:
         static MeshData CreateSphere(float radius, int sliceCount, int stackCount, DirectX::XMFLOAT4 color);
+        static MeshData CreateBox(float hx, float hy, float hz, DirectX::XMFLOAT4 color);
     };
 }

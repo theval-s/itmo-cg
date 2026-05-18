@@ -61,4 +61,27 @@ namespace val_cg {
 
         return data;
     }
+
+    MeshData GeometryGenerator::CreateBox(float hx, float hy, float hz, DirectX::XMFLOAT4 color) {
+        MeshData data;
+        data.vertices = {
+            Vertex({-hx,-hy,-hz,1}, color),
+            Vertex({ hx,-hy,-hz,1}, color),
+            Vertex({ hx, hy,-hz,1}, color),
+            Vertex({-hx, hy,-hz,1}, color),
+            Vertex({-hx,-hy, hz,1}, color),
+            Vertex({ hx,-hy, hz,1}, color),
+            Vertex({ hx, hy, hz,1}, color),
+            Vertex({-hx, hy, hz,1}, color),
+        };
+        data.indices = {
+            0,2,1, 0,3,2, // front
+            4,5,6, 4,6,7, // back
+            0,4,7, 0,7,3, // left
+            1,2,6, 1,6,5, // right
+            0,1,5, 0,5,4, // bottom
+            3,7,6, 3,6,2, // top
+        };
+        return data;
+    }
 }
