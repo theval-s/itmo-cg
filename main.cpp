@@ -15,11 +15,11 @@ void GenerateSolarSystem() {
 
 int main() {
     srand(time(NULL));
-    val_cg::Game* game =  new val_cg::Game(L"Game", 800, 800);
-
     int lab = 0;
     std::cout << "Choose lab variant: 2(mod), 3:>";
-    //std::cin >> lab;
+    std::cin >> lab;
+
+    val_cg::Game* game =  new val_cg::Game(L"Game", 800, 800);
     // Lab 1
     //game->Components.push_back(new val_cg::TriangleComponent(game));
 
@@ -27,14 +27,14 @@ int main() {
     // game->Components.push_back(new val_cg::PaddleComponent(game, val_cg::PaddleComponent::Left));
     // game->Components.push_back(new val_cg::PaddleComponent(game, val_cg::PaddleComponent::Right));
     // game->Components.push_back(new val_cg::BallComponent(game));
-    //if (lab == 2) {
+    if (lab == 2) {
             //game->GetCamera()->SetPosition({0.f, 0.f, 12.f});
          game->Components.push_back(new val_cg::Paddle3DComponent(game, val_cg::Paddle3DComponent::Left));
          game->Components.push_back(new val_cg::Paddle3DComponent(game, val_cg::Paddle3DComponent::Right));
          game->Components.push_back(new val_cg::Ball3DComponent(game));
          game->Run();
          return 0;
-    //}
+    }
 
     // Lab 3
     if (lab == 3) {
