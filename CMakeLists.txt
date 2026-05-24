@@ -15,12 +15,13 @@ add_executable(itmo_cg main.cpp
         game/platforms/renderer_win32.cpp
         external/InputDevice.cpp
         external/Delegates.cpp
-        external/SimpleMath.cpp
         game/components/3d/planet_component.cpp
         game/components/camera_component.cpp
         game/components/3d/paddle_3d_component.cpp
         game/components/3d/ball_3d_component.cpp
-        game/utils/geometry_generator.cpp)
+        game/utils/geometry_generator.cpp
+
+)
 
 target_include_directories(itmo_cg PRIVATE external game)
 target_link_libraries(itmo_cg
@@ -29,6 +30,9 @@ target_link_libraries(itmo_cg
         d3dcompiler
 )
 
+find_package(directxtk CONFIG REQUIRED)
 find_package(assimp CONFIG REQUIRED)
 target_link_libraries(itmo_cg assimp::assimp)
+target_link_libraries(itmo_cg Microsoft::DirectXTK)
+
 

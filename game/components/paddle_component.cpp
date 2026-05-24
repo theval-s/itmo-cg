@@ -11,7 +11,6 @@
 #include "../game.hpp"
 #include "consts.hpp"
 #include "Keys.h"
-#include "DebugDraw.h"
 
 
 constexpr DirectX::XMFLOAT4 paddle_polys[8] = {

@@ -9,7 +9,6 @@
 #include "d3d11.h"
 #include "SimpleMath.h"
 #include "DirectXCollision.h"
-#include "DebugDraw.h"
 
 namespace val_cg {
     class PaddleComponent : public TriangleComponent {
@@ -33,11 +32,6 @@ namespace val_cg {
             DirectX::SimpleMath::Vector4 offset;
         };
         PaddleBuffer data{};
-
-
-        // std::unique_ptr<DirectX::PrimitiveBatch<DirectX::VertexPositionColor>> m_batch;
-        // std::unique_ptr<DirectX::BasicEffect> effect;
-
 
     public:
         PaddleComponent(Game* game, Alignment al);
