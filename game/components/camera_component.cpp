@@ -6,6 +6,7 @@
 
 #include <iostream>
 #include <SimpleMath.h>
+#include <algorithm>
 
 #include "game.hpp"
 
@@ -62,5 +63,7 @@ void val_cg::CameraComponent::OnMouseMove(const InputDevice::MouseMoveEventArgs 
     float mouseSpeed = 0.005f;
     //yes, y-x and x-y is right
     cameraRotation.y -= args.Offset.x * mouseSpeed;
-    cameraRotation.x -= args.Offset.y * mouseSpeed;
+    cameraRotation.x = std::clamp(cameraRotation.x - args.Offset.y * mouseSpeed,
+                                  -DirectX::XM_PIDIV2 + 0.01f,
+                                   DirectX::XM_PIDIV2 - 0.01f);
 }

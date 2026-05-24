@@ -9,8 +9,25 @@
 #include <random>
 #include "game/components/camera_component.hpp"
 
-void GenerateSolarSystem() {
+void GenerateSolarSystem(val_cg::Game* game) {
+    val_cg::PlanetComponent* Sun = new val_cg::PlanetComponent(game, 0.f, 0.f, 1.0f, 1.f, {1.f, 0.95f, 0.f, 1.f});
+    Sun->MakeLineList({1.f, 0.95f, 0.f, 1.f});
+    game->Components.push_back(Sun);
+    game->Components.push_back(new val_cg::PlanetComponent(game, 15.f, 0.5f, 1.f, 0.5f, {1.f, 1.f, 1.f, 1.f}, Sun));
 
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<float> dist1(0.1f, 1.f);
+    std::uniform_real_distribution<float> dist5(0.1f, 5.f);
+    val_cg::PlanetComponent *tmp = nullptr;
+    for (int i = 0; i < 10; i++) {
+        if (i%2 == 1) {
+            game->Components.push_back(new val_cg::PlanetComponent(game, 1.f, 1.f, 1000.f, dist5(gen), {dist1(gen), dist1(gen), dist1(gen), 1}, tmp));
+        } else {
+            tmp = new val_cg::PlanetComponent(game, i+2.f, dist1(gen) , 1000.f, dist5(gen), {dist1(gen), dist1(gen), dist1(gen), 1}, Sun);
+            game->Components.push_back(tmp);
+        }
+    }
 }
 
 int main() {
@@ -31,24 +48,9 @@ int main() {
      // return 0;
 
     // Lab 3
-    val_cg::PlanetComponent* Sun = new val_cg::PlanetComponent(game, 0.f, 0.f, 1.0f, 1.f, {1.f, 0.95f, 0.f, 1.f});
-    Sun->MakeLineList({1.f, 0.95f, 0.f, 1.f});
-    game->Components.push_back(Sun);
-    game->Components.push_back(new val_cg::PlanetComponent(game, 15.f, 0.5f, 1.f, 0.5f, {1.f, 1.f, 1.f, 1.f}, Sun));
+    GenerateSolarSystem(game);
 
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_real_distribution<float> dist1(0.1f, 1.f);
-    std::uniform_real_distribution<float> dist5(0.1f, 5.f);
-    val_cg::PlanetComponent *tmp = nullptr;
-    for (int i = 0; i < 10; i++) {
-        if (i%2 == 1) {
-            game->Components.push_back(new val_cg::PlanetComponent(game, 1.f, 1.f, 1000.f, dist5(gen), {dist1(gen), dist1(gen), dist1(gen), 1}, tmp));
-        } else {
-            tmp = new val_cg::PlanetComponent(game, i+2.f, dist1(gen) , 1000.f, dist5(gen), {dist1(gen), dist1(gen), dist1(gen), 1}, Sun);
-            game->Components.push_back(tmp);
-        }
-    }
+
     game->Run();
     return 0;
 }
