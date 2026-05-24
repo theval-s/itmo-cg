@@ -28,3 +28,7 @@ target_link_libraries(itmo_cg
         dxgi
         d3dcompiler
 )
+
+find_package(assimp CONFIG REQUIRED)
+target_link_libraries(itmo_cg assimp::assimp)
+
