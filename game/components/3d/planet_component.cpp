@@ -27,18 +27,7 @@ namespace val_cg {
           scale(scale),
           parent(parent)
     {
-        //todo: random radius, slices?
-        MeshData mesh = GeometryGenerator::CreateSphere((parent)?0.1f:0.5f,10,10, color);
-
-        //todo: change the whole structure
-        std::vector<DirectX::XMFLOAT4> tempPoints;
-        tempPoints.reserve(mesh.vertices.size()*2);
-        for (const auto& v : mesh.vertices) {
-            tempPoints.push_back(v.position);
-            tempPoints.push_back(v.color);
-        }
-        this->points = tempPoints;
-        this->indices = mesh.indices;
+        MakeTriangleList(color);
     }
 
     void PlanetComponent::Update(float deltaTime) {
@@ -62,6 +51,36 @@ namespace val_cg {
 
         //updating constant buffer
         MeshComponent::Update(deltaTime);
+    }
+
+    void PlanetComponent::MakeLineList(const DirectX::XMFLOAT4& color) {
+        MeshData mesh = GeometryGenerator::CreateSphereLineList((parent)?0.1f:0.5f,10,10, color);
+        topology = D3D11_PRIMITIVE_TOPOLOGY_LINELIST;
+
+        //todo: change the whole structure
+        std::vector<DirectX::XMFLOAT4> tempPoints;
+        tempPoints.reserve(mesh.vertices.size()*2);
+        for (const auto& v : mesh.vertices) {
+            tempPoints.push_back(v.position);
+            tempPoints.push_back(v.color);
+        }
+        this->points = tempPoints;
+        this->indices = mesh.indices;
+    }
+
+    void PlanetComponent::MakeTriangleList(const DirectX::XMFLOAT4& color) {
+        MeshData mesh = GeometryGenerator::CreateSphere((parent)?0.1f:0.5f,10,10, color);
+        topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+
+        //todo: change the whole structure
+        std::vector<DirectX::XMFLOAT4> tempPoints;
+        tempPoints.reserve(mesh.vertices.size()*2);
+        for (const auto& v : mesh.vertices) {
+            tempPoints.push_back(v.position);
+            tempPoints.push_back(v.color);
+        }
+        this->points = tempPoints;
+        this->indices = mesh.indices;
     }
 }
 

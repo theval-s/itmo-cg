@@ -58,6 +58,62 @@ namespace val_cg {
             data.indices.push_back(base+(i+1));
             data.indices.push_back(base+i);
         }
+        return data;
+    }
+
+    MeshData GeometryGenerator::CreateSphereLineList(float radius, int sliceCount, int stackCount, DirectX::XMFLOAT4 color) {
+        MeshData data;
+
+        data.vertices.push_back(Vertex({0.0f, radius, 0.0f, 1.0f}, color));
+
+        float phiStep = DirectX::XM_PI / stackCount;
+        float thetaStep = DirectX::XM_2PI / sliceCount;
+
+        for (int i = 1; i <= stackCount - 1; i++) {
+            float phi = i * phiStep;
+            for (int j = 0; j <= sliceCount; j++) {
+                float theta = j * thetaStep;
+                float x = radius * sinf(phi) * cosf(theta);
+                float y = radius * cosf(phi);
+                float z = radius * sinf(phi) * sinf(theta);
+                data.vertices.push_back(Vertex({x, y, z, 1.0f}, color));
+            }
+        }
+
+        data.vertices.push_back(Vertex({0.0f, -radius, 0.0f, 1.0f}, color));
+
+        int base = 1;
+        int ringCount = sliceCount + 1;
+
+        // top pole to first ring
+        for (int j = 0; j < sliceCount; j++) {
+            data.indices.push_back(0);
+            data.indices.push_back(base + j);
+        }
+
+        // horizontal rings
+        for (int i = 0; i < stackCount - 1; i++) {
+            for (int j = 0; j < sliceCount; j++) {
+                data.indices.push_back(base + i * ringCount + j);
+                data.indices.push_back(base + i * ringCount + j + 1);
+            }
+        }
+
+        // vertical edges between adjacent rings
+        for (int i = 0; i < stackCount - 2; i++) {
+            for (int j = 0; j < sliceCount; j++) {
+                data.indices.push_back(base + i * ringCount + j);
+                data.indices.push_back(base + (i + 1) * ringCount + j);
+            }
+        }
+
+        // last ring to bottom pole
+        int downIndex = data.vertices.size() - 1;
+        int lastBase = downIndex - ringCount;
+        for (int i = 0; i < sliceCount; i++) {
+            data.indices.push_back(lastBase + i);
+            data.indices.push_back(downIndex);
+        }
 
         return data;
     }

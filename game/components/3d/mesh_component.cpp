@@ -144,7 +144,7 @@ namespace val_cg {
         game->renderer.deviceContext->RSSetViewports(1, &viewport);
 
         game->renderer.deviceContext->IASetInputLayout(layout);
-        game->renderer.deviceContext->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        game->renderer.deviceContext->IASetPrimitiveTopology(topology);
         game->renderer.deviceContext->IASetIndexBuffer(ib, DXGI_FORMAT_R32_UINT, 0);
         game->renderer.deviceContext->IASetVertexBuffers(0, 1, &vb, strides, offsets);
         game->renderer.deviceContext->VSSetShader(vertexShader, nullptr, 0);

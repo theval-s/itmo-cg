@@ -19,5 +19,6 @@ namespace val_cg {
         ID3D11Buffer* constantBuffer = nullptr;
         WorldViewProjData data{};
         DirectX::SimpleMath::Matrix worldMatrix{};
+        D3D_PRIMITIVE_TOPOLOGY topology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
     };
 }

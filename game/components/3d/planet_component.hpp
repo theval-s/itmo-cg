@@ -17,6 +17,8 @@ namespace val_cg {
                         PlanetComponent* parent = nullptr);
 
         void Update(float deltaTime) override;
+        void MakeLineList(const DirectX::XMFLOAT4& color);
+        void MakeTriangleList(const DirectX::XMFLOAT4& color);
 
     private:
         float orbitRadius = 0.f;
