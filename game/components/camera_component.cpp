@@ -39,18 +39,19 @@ void val_cg::CameraComponent::Update(float deltaTime) {
 
     auto rot = Matrix::CreateFromYawPitchRoll(cameraRotation);
 
+    constexpr float moveSpeed = 0.2f;
     if (input->IsKeyDown(Keys::W)) {
         //std::cout << "camera forward" << cameraPosition.x << " " <<  cameraPosition.y << " " << cameraPosition.z <<"\n";
-        cameraPosition += rot.Forward(); //todo: add modifiable move speed value
+        cameraPosition += rot.Forward() * moveSpeed;
     }
     if (input->IsKeyDown(Keys::S)) {
         //std::cout << "camera backward" << cameraPosition.x << " " <<  cameraPosition.y << " " << cameraPosition.z <<"\n";
-        cameraPosition -= rot.Forward();
+        cameraPosition -= rot.Forward() * moveSpeed;
     }
-    if (input->IsKeyDown(Keys::A)) cameraPosition -= rot.Right();
-    if (input->IsKeyDown(Keys::D)) cameraPosition += rot.Right();
-    if (input->IsKeyDown(Keys::Space)) cameraPosition += rot.Up();
-    if (input->IsKeyDown(Keys::LeftShift)) cameraPosition -= rot.Up();
+    if (input->IsKeyDown(Keys::A)) cameraPosition -= rot.Right() * moveSpeed;
+    if (input->IsKeyDown(Keys::D)) cameraPosition += rot.Right() * moveSpeed;
+    if (input->IsKeyDown(Keys::Space)) cameraPosition += rot.Up() * moveSpeed;
+    if (input->IsKeyDown(Keys::LeftShift)) cameraPosition -= rot.Up() * moveSpeed;
 
     viewMatrix = Matrix::CreateLookAt(cameraPosition, cameraPosition+rot.Forward(),rot.Up());
 }
