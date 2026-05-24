@@ -45,8 +45,7 @@ namespace val_cg {
         currentOrbitAngle += orbitSpeed * deltaTime;
         currentRotationAngle += rotationSpeed * deltaTime;
 
-        //Matrix rotation = Matrix::CreateRotationY(currentRotationAngle);
-        Matrix rotation = {};
+        Matrix rotation = Matrix::CreateRotationY(currentRotationAngle);
         Matrix scaling = Matrix::CreateScale(scale);
         Matrix translation = Matrix::CreateTranslation(orbitRadius * cos(currentOrbitAngle), 0, orbitRadius * sin(currentOrbitAngle));
         //std::cout << "rotation " << currentRotationAngle << " -> " << currentOrbitAngle << std::endl;

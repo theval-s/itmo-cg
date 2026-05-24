@@ -70,18 +70,33 @@ namespace val_cg {
 		GetCursorPos(&p);
 		ScreenToClient(game->renderer.display.GetWindowHandle(), &p);
 
-		MousePosition	= Vector2(p.x, p.y);
-		MouseOffset		= Vector2(args.X, args.Y);
+		if (args.Mode & MOUSE_MOVE_ABSOLUTE)
+		{
+			// Normalize from [0,65535] to screen pixels
+			int screenW = GetSystemMetrics(SM_CXVIRTUALSCREEN);
+			int screenH = GetSystemMetrics(SM_CYVIRTUALSCREEN);
+			Vector2 absPos(
+				(args.X / 65535.0f) * screenW,
+				(args.Y / 65535.0f) * screenH
+			);
+			MouseOffset   = absPos - MousePosition; // delta from last frame
+			MousePosition = absPos;
+		}
+		else
+		{
+			MouseOffset   = Vector2(args.X, args.Y);
+			MousePosition	= Vector2(p.x, p.y);
+		}
 		MouseWheelDelta = args.WheelDelta;
 
 		const MouseMoveEventArgs moveArgs = {MousePosition, MouseOffset, MouseWheelDelta};
 
-		printf(" Mouse: posX=%04.4f posY:%04.4f offsetX:%04.4f offsetY:%04.4f, wheelDelta=%04d \n",
-			MousePosition.x,
-			MousePosition.y,
-			MouseOffset.x,
-			MouseOffset.y,
-			MouseWheelDelta);
+		// printf(" Mouse: posX=%04.4f posY:%04.4f offsetX:%04.4f offsetY:%04.4f, wheelDelta=%04d \n",
+		// 	MousePosition.x,
+		// 	MousePosition.y,
+		// 	MouseOffset.x,
+		// 	MouseOffset.y,
+		// 	MouseWheelDelta);
 
 		MouseMove.Broadcast(moveArgs);
 	}

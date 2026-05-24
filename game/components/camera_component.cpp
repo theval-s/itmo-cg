@@ -59,7 +59,7 @@ val_cg::CameraData val_cg::CameraComponent::GetCameraData() const {
 }
 
 void val_cg::CameraComponent::OnMouseMove(const InputDevice::MouseMoveEventArgs &args) {
-    float mouseSpeed = 0.0000001f;
+    float mouseSpeed = 0.005f;
     //yes, y-x and x-y is right
     cameraRotation.y -= args.Offset.x * mouseSpeed;
     cameraRotation.x -= args.Offset.y * mouseSpeed;
