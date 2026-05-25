@@ -33,11 +33,29 @@ void val_cg::CameraComponent::Initialize() {
     }
 }
 
+void val_cg::CameraComponent::SetOrbitTarget(const Vector3* target, const float* radius = nullptr, float distance = 5.f) {
+    orbitTarget = target;
+    orbitTargetRadius = radius;
+    orbitDistance = distance;
+}
+
 void val_cg::CameraComponent::Update(float deltaTime) {
     auto input = game->InputHandler();
     if (!input) return;
 
     auto rot = Matrix::CreateFromYawPitchRoll(cameraRotation);
+
+    if (orbitTarget) {
+        constexpr float zoomSpeed = 5.f;
+        if (input->IsKeyDown(Keys::W)) orbitDistance -= zoomSpeed * deltaTime;
+        if (input->IsKeyDown(Keys::S)) orbitDistance += zoomSpeed * deltaTime;
+        float minDistance = orbitTargetRadius ? (*orbitTargetRadius + 0.3f) : 0.5f;
+        orbitDistance = max(minDistance, orbitDistance);
+
+        cameraPosition = *orbitTarget - rot.Forward() * orbitDistance;
+        viewMatrix = Matrix::CreateLookAt(cameraPosition, *orbitTarget, rot.Up());
+        return;
+    }
 
     constexpr float moveSpeed = 0.2f;
     if (input->IsKeyDown(Keys::W)) {

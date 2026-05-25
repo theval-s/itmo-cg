@@ -20,6 +20,8 @@ namespace val_cg {
 
         void SetPosition(const DirectX::SimpleMath::Vector3& position);
         void Initialize() override;
+        void SetOrbitTarget(const DirectX::SimpleMath::Vector3 *target, const float *radius, float distance);
+
         //void Draw() override;  //??? instead we just draw using camera view matrix
         void Update(float deltaTime) override;
         [[nodiscard]] CameraData GetCameraData() const;
@@ -32,5 +34,8 @@ namespace val_cg {
     private:
         DirectX::SimpleMath::Vector3 cameraPosition;
         DirectX::SimpleMath::Vector3 cameraRotation;
+        const DirectX::SimpleMath::Vector3* orbitTarget = nullptr;
+        const float* orbitTargetRadius = nullptr;
+        float orbitDistance = 5.f;
     };
 }//namespace val_cg

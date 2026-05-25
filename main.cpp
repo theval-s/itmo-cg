@@ -64,7 +64,9 @@ void GenerateKatamari(val_cg::Game* game) {
         }
     }
 
-    game->Components.push_back(new val_cg::KatamariPlayerComponent(game));
+    auto* player = new val_cg::KatamariPlayerComponent(game);
+    game->Components.push_back(player);
+    game->GetCamera()->SetOrbitTarget(&player->GetPosition(), &player->GetRadius(), 8.f);
 }
 
 int main() {

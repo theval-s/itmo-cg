@@ -21,7 +21,8 @@ namespace val_cg {
 
         void Initialize() override;
         void Update(float deltaTime) override;
-
+        const DirectX::SimpleMath::Vector3& GetPosition() const { return position; }
+        const float& GetRadius() const { return radius; }
     private:
         DirectX::SimpleMath::Vector3 position{};
         DirectX::SimpleMath::Quaternion rollRotation{};
