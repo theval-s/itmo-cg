@@ -62,7 +62,7 @@ namespace val_cg {
             vertexShaderByteCode->GetBufferPointer(),
             vertexShaderByteCode->GetBufferSize(), &layout);
 
-        // Constant buffer (WorldViewProjData — same layout as MeshComponent)
+        // Constant buffer (WorldViewProjData)
         D3D11_BUFFER_DESC constBufDesc = {};
         constBufDesc.Usage = D3D11_USAGE_DYNAMIC;
         constBufDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;

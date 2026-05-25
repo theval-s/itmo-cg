@@ -64,7 +64,7 @@ void GenerateKatamari(val_cg::Game* game) {
         }
     }
 
-    auto* player = new val_cg::KatamariPlayerComponent(game);
+    auto* player = new val_cg::KatamariPlayerComponent(game, L"./models/owl.jpg");
     game->Components.push_back(player);
     game->GetCamera()->SetOrbitTarget(&player->GetPosition(), &player->GetRadius(), 8.f);
 }
@@ -86,12 +86,21 @@ int main() {
      // game->Run();
      // return 0;
 
-    // Lab 3
-    // GenerateSolarSystem(game);
+    int input = 3;
+    std::cin >> input;
 
-    // Lab 4 – Katamari
-    // Controls: arrow keys move the ball; WASD + mouse move the camera.
-    GenerateKatamari(game);
+    switch (input) {
+        case 3: {
+            // Lab 3
+            GenerateSolarSystem(game);
+            break;
+        }
+        case 4: {
+            // Lab 4 – Katamari
+            GenerateKatamari(game);
+            break;
+        }
+    }
 
     game->Run();
     return 0;
