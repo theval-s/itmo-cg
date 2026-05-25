@@ -242,10 +242,6 @@ namespace val_cg {
                     Vector3 worldOffset = Vector3(c.x, c.y, c.z) - position;
                     model->AttachTo(&position, &rollMatrix, worldOffset);
 
-                    // volume-preserving growth: V_new = V_ball + V_model
-                    // float r3  = radius * radius * radius;
-                    // float mr3 = model->GetObjectRadius() * model->GetObjectRadius() * model->GetObjectRadius();
-                    // radius = std::cbrt(r3 + mr3);
                     radius *=1.1f;
 
                     //raise ball when it grows

@@ -71,7 +71,7 @@ void GenerateKatamari(val_cg::Game* game) {
 
 int main() {
     srand(time(NULL));
-    val_cg::Game* game =  new val_cg::Game(L"Game", 800, 800);
+    val_cg::Game* game =  new val_cg::Game(L"Game", 1600, 900);
     // Lab 1
     //game->Components.push_back(new val_cg::TriangleComponent(game));
 
@@ -87,6 +87,7 @@ int main() {
      // return 0;
 
     int input = 3;
+    std::cout << "lab3(mod) or lab4:>";
     std::cin >> input;
 
     switch (input) {

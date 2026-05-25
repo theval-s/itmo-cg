@@ -26,6 +26,10 @@ namespace val_cg {
             aiProcess_JoinIdenticalVertices |
             aiProcess_PreTransformVertices |
             aiProcess_FlipUVs);
+        // std::cout << "embedded textures: " << scene->mNumTextures << "\n";
+        // aiString texPath;
+        // auto result = scene->mMaterials[0]->GetTexture(aiTextureType_DIFFUSE, 0, &texPath);
+        // std::cout << "diffuse tex: " << (result == AI_SUCCESS ? texPath.C_Str() : "none") << "\n";
 
         if (!scene || !scene->HasMeshes()) {
             std::cerr << "[ModelComponent] Failed to load: " << filePath

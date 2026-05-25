@@ -15,7 +15,8 @@ using namespace DirectX::SimpleMath;
 val_cg::CameraComponent::CameraComponent(Game *game): GameComponent(game) {
     cameraRotation = Vector3(0.f, 0.f, 0.f);
     cameraPosition = Vector3(0.f, 0.f, 0.f);
-    projMatrix = Matrix::CreatePerspectiveFieldOfView(DirectX::XM_PIDIV2, 1.f, 0.001f, 100.0f);
+    float aspect = static_cast<float>(game->renderer.ScreenWidth) / game->renderer.ScreenHeight;
+    projMatrix = Matrix::CreatePerspectiveFieldOfView(DirectX::XM_PIDIV2, aspect, 0.001f, 100.0f);
 }
 
 void val_cg::CameraComponent::SetPosition(const Vector3 &position) {
