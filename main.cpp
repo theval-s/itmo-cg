@@ -4,6 +4,9 @@
 #include "components/3d/ball_3d_component.hpp"
 #include "components/3d/paddle_3d_component.hpp"
 #include "components/3d/planet_component.hpp"
+#include "components/3d/model_component.hpp"
+#include "components/3d/textured_model_component.hpp"
+#include "components/3d/katamari_player_component.hpp"
 #include "game/game.hpp"
 #include "game/components/paddle_component.hpp"
 #include <random>
@@ -30,6 +33,39 @@ void GenerateSolarSystem(val_cg::Game* game) {
     }
 }
 
+void GenerateKatamari(val_cg::Game* game) {
+    using namespace DirectX::SimpleMath;
+
+    struct ModelDef { const char* path; DirectX::XMFLOAT4 color; float scale; };
+    static constexpr ModelDef defs[] = {
+        {"./models/mouse.fbx", {0.8f, 0.7f, 0.6f, 1.f}, 0.004f},
+        {"./models/pizza.fbx", {0.9f, 0.6f, 0.1f, 1.f}, 0.7f},
+        {"./models/wolf.fbx",  {0.5f, 0.5f, 0.7f, 1.f}, 0.008f},
+    };
+
+    std::mt19937 gen(std::random_device{}());
+    std::uniform_real_distribution<float> posDist(-12.f, 12.f);
+    std::uniform_real_distribution<float> scaleMult(0.7f, 1.6f);
+
+    game->Components.push_back(new val_cg::KatamariFloorComponent(game));
+
+    for (int i = 0; i < 18; ++i) {
+        const auto& def = defs[i % 3];
+        Vector3 pos{posDist(gen), 0.f, posDist(gen)};
+        // Keep objects away from player start
+        if (pos.Length() < 2.f) { pos.Normalize(); pos *= 2.f; }
+        float s = def.scale * scaleMult(gen);
+        if (i % 3 == 0) { // mouse — has diffuse texture
+            game->Components.push_back(new val_cg::TexturedModelComponent(
+                game, def.path, L"./models/mouse_diffuse.png", pos, s));
+        } else {
+            game->Components.push_back(new val_cg::ModelComponent(game, def.path, pos, s, def.color));
+        }
+    }
+
+    game->Components.push_back(new val_cg::KatamariPlayerComponent(game));
+}
+
 int main() {
     srand(time(NULL));
     val_cg::Game* game =  new val_cg::Game(L"Game", 800, 800);
@@ -48,8 +84,11 @@ int main() {
      // return 0;
 
     // Lab 3
-    GenerateSolarSystem(game);
+    // GenerateSolarSystem(game);
 
+    // Lab 4 – Katamari
+    // Controls: arrow keys move the ball; WASD + mouse move the camera.
+    GenerateKatamari(game);
 
     game->Run();
     return 0;
