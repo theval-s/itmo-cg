@@ -24,6 +24,7 @@ namespace val_cg {
 
     private:
         DirectX::SimpleMath::Vector3 position{};
+        DirectX::SimpleMath::Quaternion rollRotation{};
         DirectX::SimpleMath::Matrix rollMatrix{};
         float radius = 0.5f;
         float speed  = 5.0f;

@@ -45,6 +45,7 @@ namespace val_cg {
 
     void KatamariPlayerComponent::Initialize() {
         MeshComponent::Initialize();
+        rollRotation = Quaternion::Identity;
         rollMatrix = Matrix::Identity;
         position.y = groundY + radius;
         collider.Center = {position.x, position.y, position.z};
@@ -66,10 +67,23 @@ namespace val_cg {
             float dist = speed * deltaTime;
             position += moveDir * dist;
 
-            // Rolling without slipping: angle = arc_length / radius
+            //keep rolling rolling rolling
             float rollAngle = dist / radius;
-            Vector3 rollAxis(moveDir.z, 0.f, -moveDir.x);
-            rollMatrix = Matrix::CreateFromAxisAngle(rollAxis, rollAngle) * rollMatrix;
+
+            Vector3 rollAxis = Vector3::Up.Cross(moveDir);
+
+            if (rollAxis.LengthSquared() > 0.f)
+            {
+                rollAxis.Normalize();
+
+                Quaternion deltaRot =
+                    Quaternion::CreateFromAxisAngle(rollAxis, rollAngle);
+
+                rollRotation = rollRotation* deltaRot;
+                rollRotation.Normalize();
+
+                rollMatrix = Matrix::CreateFromQuaternion(rollRotation);
+            }
         }
 
         CheckCollision();
@@ -92,10 +106,11 @@ namespace val_cg {
                     Vector3 worldOffset = Vector3(c.x, c.y, c.z) - position;
                     model->AttachTo(&position, &rollMatrix, worldOffset);
 
-                    // Volume-preserving growth: V_new = V_ball + V_model
-                    float r3  = radius * radius * radius;
-                    float mr3 = model->GetObjectRadius() * model->GetObjectRadius() * model->GetObjectRadius();
-                    radius = std::cbrt(r3 + mr3);
+                    // volume-preserving growth: V_new = V_ball + V_model
+                    // float r3  = radius * radius * radius;
+                    // float mr3 = model->GetObjectRadius() * model->GetObjectRadius() * model->GetObjectRadius();
+                    // radius = std::cbrt(r3 + mr3);
+                    radius *=1.1f;
 
                     //raise ball when it grows
                     position.y = groundY + radius;

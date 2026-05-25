@@ -81,10 +81,17 @@ namespace val_cg {
     }
 
     void ModelComponent::Update(float deltaTime) {
-        if (attachPoint)
+        if (attachPoint && attachRotation) {
             worldPos = *attachPoint +
                 DirectX::SimpleMath::Vector3::TransformNormal(attachOffset, *attachRotation);
-        worldMatrix = Matrix::CreateScale(scaleVal) * Matrix::CreateTranslation(worldPos);
+            worldMatrix =
+                Matrix::CreateScale(scaleVal) *
+                (*attachRotation) *
+                Matrix::CreateTranslation(worldPos);
+        }
+        else {
+            worldMatrix = Matrix::CreateScale(scaleVal) * Matrix::CreateTranslation(worldPos);
+        }
         collider.Center = {worldPos.x, worldPos.y, worldPos.z};
         MeshComponent::Update(deltaTime);
     }

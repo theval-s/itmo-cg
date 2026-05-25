@@ -40,7 +40,9 @@ void GenerateKatamari(val_cg::Game* game) {
     static constexpr ModelDef defs[] = {
         {"./models/mouse.fbx", {0.8f, 0.7f, 0.6f, 1.f}, 0.004f},
         {"./models/pizza.fbx", {0.9f, 0.6f, 0.1f, 1.f}, 0.7f},
-        {"./models/wolf.fbx",  {0.5f, 0.5f, 0.7f, 1.f}, 0.008f},
+        {"./models/wolf.fbx",  {0.5f, 0.5f, 0.7f, 1.f}, 0.01f},
+        {"./models/diamond.obj", {0.f, 0.82f, 1.f, 1.f}, 0.01f},
+        {"./models/mushroom/mushroom.obj", {0.5f, 0.25f, 0.25f, 1.f}, 0.2f}
     };
 
     std::mt19937 gen(std::random_device{}());
@@ -49,13 +51,12 @@ void GenerateKatamari(val_cg::Game* game) {
 
     game->Components.push_back(new val_cg::KatamariFloorComponent(game));
 
-    for (int i = 0; i < 18; ++i) {
-        const auto& def = defs[i % 3];
+    for (int i = 0; i < 25; ++i) {
+        const auto& def = defs[i % 5];
         Vector3 pos{posDist(gen), 0.f, posDist(gen)};
-        // Keep objects away from player start
         if (pos.Length() < 2.f) { pos.Normalize(); pos *= 2.f; }
         float s = def.scale * scaleMult(gen);
-        if (i % 3 == 0) { // mouse — has diffuse texture
+        if (i % 5 == 0) { // mouse — has diffuse texture
             game->Components.push_back(new val_cg::TexturedModelComponent(
                 game, def.path, L"./models/mouse_diffuse.png", pos, s));
         } else {
