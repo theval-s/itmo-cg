@@ -12,6 +12,35 @@
 namespace val_cg {
     using namespace DirectX::SimpleMath;
 
+    OrbitComponent::OrbitComponent(Game* game, PlanetComponent *parent, int segmentCount, float orbitRadius,
+        DirectX::XMFLOAT4 color): MeshComponent(game), parent(parent) {
+        topology = D3D10_PRIMITIVE_TOPOLOGY_LINELIST;
+        points.clear();
+        indices.clear();
+
+        //float phiStep = DirectX::XM_PI / segmentCount;
+        const float thetaStep = DirectX::XM_2PI / segmentCount;
+        for (int i = 0; i < segmentCount; i++) {
+            const float theta = i * thetaStep;
+            const float x = orbitRadius * cosf(theta);
+            const float z = orbitRadius * sinf(theta);
+            points.push_back({x, 0.f, z, 1.f});
+            points.push_back(color);
+            indices.push_back(i);
+            indices.push_back((i + 1) % segmentCount);
+        }
+    }
+
+    void OrbitComponent::Update(float deltaTime) {
+        if (parent && parent->parent) {
+            const Vector3 grandparentPos = parent->parent->worldMatrix.Translation();
+            worldMatrix = Matrix::CreateTranslation(grandparentPos);
+        } else {
+            worldMatrix = Matrix::Identity;
+        }
+        MeshComponent::Update(deltaTime);
+    }
+
     PlanetComponent::PlanetComponent(Game* game,
                                      float orbitRadius,
                                      float orbitSpeed,
@@ -19,7 +48,7 @@ namespace val_cg {
                                      float scale,
                                      DirectX::XMFLOAT4 color,
                                      PlanetComponent* parent
-                                     )
+    )
         : MeshComponent(game),
           orbitRadius(orbitRadius),
           orbitSpeed(orbitSpeed),
@@ -51,6 +80,8 @@ namespace val_cg {
 
         //updating constant buffer
         MeshComponent::Update(deltaTime);
+
+        if (orbit) orbit->Update(deltaTime);
     }
 
     void PlanetComponent::MakeLineList(const DirectX::XMFLOAT4& color) {
@@ -81,6 +112,28 @@ namespace val_cg {
         }
         this->points = tempPoints;
         this->indices = mesh.indices;
+    }
+
+    void PlanetComponent::MakeOrbit() {
+        orbit = new OrbitComponent(game, this, 64, orbitRadius, {0.62f, 0.62f, 0.62f,1});
+        orbit->Initialize();
+    }
+
+    void PlanetComponent::DestroyResources() {
+        MeshComponent::DestroyResources();
+
+        if (orbit) {
+            orbit->DestroyResources();
+            delete orbit;
+        }
+    }
+
+    void PlanetComponent::Draw() {
+        MeshComponent::Draw();
+
+        if (orbit) {
+            orbit->Draw();
+        }
     }
 }
 

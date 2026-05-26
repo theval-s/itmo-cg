@@ -25,10 +25,13 @@ void GenerateSolarSystem(val_cg::Game* game) {
     val_cg::PlanetComponent *tmp = nullptr;
     for (int i = 0; i < 10; i++) {
         if (i%2 == 1) {
-            game->Components.push_back(new val_cg::PlanetComponent(game, 1.f, 1.f, 1000.f, dist5(gen), {dist1(gen), dist1(gen), dist1(gen), 1}, tmp));
+            auto temptemp = new val_cg::PlanetComponent(game, 1.f, 1.f, 1000.f, dist5(gen), {dist1(gen), dist1(gen), dist1(gen), 1}, tmp);
+            game->Components.push_back(temptemp);
+            temptemp->MakeOrbit();
         } else {
             tmp = new val_cg::PlanetComponent(game, i+2.f, dist1(gen) , 1000.f, dist5(gen), {dist1(gen), dist1(gen), dist1(gen), 1}, Sun);
             game->Components.push_back(tmp);
+            tmp->MakeOrbit();
         }
     }
 }
@@ -87,8 +90,8 @@ int main() {
      // return 0;
 
     int input = 3;
-    std::cout << "lab3(mod) or lab4:>";
-    std::cin >> input;
+    // std::cout << "lab3(mod) or lab4:>";
+    // std::cin >> input;
 
     switch (input) {
         case 3: {
