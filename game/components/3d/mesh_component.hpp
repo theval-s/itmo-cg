@@ -15,6 +15,8 @@ namespace val_cg {
         void Initialize() override;
         void Draw() override;
         void Update(float deltaTime) override;
+        DirectX::SimpleMath::Matrix GetWorldMatrix() const { return worldMatrix; }
+
     protected:
         ID3D11Buffer* constantBuffer = nullptr;
         WorldViewProjData data{};

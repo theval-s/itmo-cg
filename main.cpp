@@ -9,6 +9,7 @@
 #include "components/3d/katamari_player_component.hpp"
 #include "components/3d/lit_model_component.hpp"
 #include "components/3d/lights/directional_light_component.hpp"
+//#include "components/3d/shadow_map_component.hpp"
 #include "game/game.hpp"
 #include "game/components/paddle_component.hpp"
 #include <random>
@@ -60,8 +61,9 @@ void GenerateKatamari(val_cg::Game* game) {
         30.f, 30.f, 5.f);
     game->Components.push_back(terrain);
 
-    auto* sun = new val_cg::DirectionalLightComponent(game, {-1.f,-1.f,-1.f}, {1.f,0.9f,0.8f});
+    auto* sun = new val_cg::DirectionalLightComponent(game, {0,1.f,0}, {1.f,0.9f,0.8f});
     game->AddLight(sun);
+    //game->SetShadowManager(new val_cg::ShadowMapComponent(game, sun));
 
     for (int i = 0; i < 25; ++i) {
         const auto& def = defs[i % 5];
@@ -75,7 +77,7 @@ void GenerateKatamari(val_cg::Game* game) {
         } else if (i%5 == 3) {
             game->Components.push_back(new val_cg::LitModelComponent(game, "models/diamond.obj", pos, s));
         } else {
-            game->Components.push_back(new val_cg::ModelComponent(game, def.path, pos, s, def.color));
+            game->Components.push_back(new val_cg::LitModelComponent(game, def.path, pos, s));
         }
     }
 
