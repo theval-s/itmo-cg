@@ -48,6 +48,12 @@ namespace val_cg {
 
     static constexpr int CSM_NUM_CASCADES = 3;
 
+    // Constant buffer for TerrainShader (slot b0).
+    struct TerrainCBData {
+        DirectX::SimpleMath::Matrix worldViewProj;  // 64
+        DirectX::SimpleMath::Matrix world;           // 64
+    }; // 128 bytes
+
     // Bound to slot b1 in PhongShader, updated once per frame by ShadowMapComponent.
     struct ShadowCBData {
         DirectX::SimpleMath::Matrix lightViewProj0;  // 64  – transposed for HLSL

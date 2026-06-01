@@ -4,6 +4,7 @@
 
 #include "katamari_player_component.hpp"
 #include "model_component.hpp"
+#include "shadow_map_component.hpp"
 #include "game.hpp"
 #include "consts.hpp"
 #include "utils/geometry_generator.hpp"
@@ -87,7 +88,7 @@ namespace val_cg {
 
         D3D11_BUFFER_DESC cbDesc = {};
         cbDesc.Usage = D3D11_USAGE_DYNAMIC; cbDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-        cbDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE; cbDesc.ByteWidth = sizeof(WorldViewProjData);
+        cbDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE; cbDesc.ByteWidth = sizeof(TerrainCBData);
         dev->CreateBuffer(&cbDesc, nullptr, &constantBuffer);
 
         CD3D11_RASTERIZER_DESC rastDesc = {};
@@ -127,14 +128,23 @@ namespace val_cg {
         ctx->VSSetShader(vertexShader, nullptr, 0);
         ctx->PSSetShader(pixelShader, nullptr, 0);
 
+        TerrainCBData tcb;
+        tcb.worldViewProj = data.matrix;  // already computed as (world*view*proj).T by Update()
+        tcb.world         = worldMatrix.Transpose();
+
         D3D11_MAPPED_SUBRESOURCE mapped = {};
         ctx->Map(constantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
-        memcpy(mapped.pData, &data, sizeof(WorldViewProjData));
+        memcpy(mapped.pData, &tcb, sizeof(TerrainCBData));
         ctx->Unmap(constantBuffer, 0);
         ctx->VSSetConstantBuffers(0, 1, &constantBuffer);
 
-        ctx->PSSetShaderResources(0, 1, &srv_);
-        ctx->PSSetSamplers(0, 1, &sampler_);
+        // Bind shadow maps at t0-t2, shadow sampler at s0 (b1 is the shadow params CB)
+        if (auto* shadowMgr = game->GetShadowManager())
+            shadowMgr->BindForDraw(ctx);
+
+        // Diffuse texture at t3, regular sampler at s1 — avoids overwriting shadow slots
+        ctx->PSSetShaderResources(3, 1, &srv_);
+        ctx->PSSetSamplers(1, 1, &sampler_);
         ctx->DrawIndexed(static_cast<UINT>(indices.size()), 0, 0);
     }
 
