@@ -45,8 +45,9 @@ namespace val_cg {
         const DirectX::SimpleMath::Matrix* attachRotation  = nullptr;
         DirectX::SimpleMath::Vector3 attachOffset{};
         std::vector<DirectX::XMFLOAT2> meshUVs;
+        std::vector<DirectX::XMFLOAT3> meshNormals;
+        std::string modelFilePath;
 
-    private:
         void LoadMesh(const std::string& filePath, DirectX::XMFLOAT4 color);
     };
 }

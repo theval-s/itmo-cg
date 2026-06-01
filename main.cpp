@@ -7,6 +7,8 @@
 #include "components/3d/model_component.hpp"
 #include "components/3d/textured_model_component.hpp"
 #include "components/3d/katamari_player_component.hpp"
+#include "components/3d/lit_model_component.hpp"
+#include "components/3d/lights/directional_light_component.hpp"
 #include "game/game.hpp"
 #include "game/components/paddle_component.hpp"
 #include <random>
@@ -53,6 +55,10 @@ void GenerateKatamari(val_cg::Game* game) {
     std::uniform_real_distribution<float> scaleMult(0.7f, 1.6f);
 
     game->Components.push_back(new val_cg::KatamariFloorComponent(game));
+    auto* sun = new val_cg::DirectionalLightComponent(game, {-1.f,-1.f,-1.f}, {1.f,0.9f,0.8f});
+    game->AddLight(sun);
+
+
 
     for (int i = 0; i < 25; ++i) {
         const auto& def = defs[i % 5];
@@ -62,6 +68,8 @@ void GenerateKatamari(val_cg::Game* game) {
         if (i % 5 == 0) { // mouse — has diffuse texture
             game->Components.push_back(new val_cg::TexturedModelComponent(
                 game, def.path, L"./models/mouse_diffuse.png", pos, s));
+        } else if (i%5 == 3) {
+            game->Components.push_back(new val_cg::LitModelComponent(game, "models/diamond.obj", pos, s));
         } else {
             game->Components.push_back(new val_cg::ModelComponent(game, def.path, pos, s, def.color));
         }
@@ -89,22 +97,15 @@ int main() {
      // game->Run();
      // return 0;
 
-    int input = 3;
     // std::cout << "lab3(mod) or lab4:>";
     // std::cin >> input;
 
-    switch (input) {
-        case 3: {
-            // Lab 3
-            GenerateSolarSystem(game);
-            break;
-        }
-        case 4: {
-            // Lab 4 – Katamari
-            GenerateKatamari(game);
-            break;
-        }
-    }
+    // Lab 3
+    //GenerateSolarSystem(game);
+
+
+    // Lab 4-5 – Katamari
+    GenerateKatamari(game);
 
     game->Run();
     return 0;

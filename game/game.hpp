@@ -9,6 +9,7 @@
 #include "InputDevice.h"
 #include "platforms/renderer_win32.hpp"
 #include "components/camera_component.hpp"
+#include "components/3d/lights/light_component.hpp"
 #include "../exports.h"
 
 namespace val_cg {
@@ -41,6 +42,12 @@ namespace val_cg {
         CameraData GetCameraData() const { return camera->GetCameraData();}
         CameraComponent* GetCamera() const { return camera; }
         bool IsCameraCreated() const { return isCameraCreated; }
+
+        void AddLight(LightComponent* l) {
+            Components.push_back(l);
+            lightSources.push_back(l);
+        }
+        const std::vector<LightComponent*>& GetLights() const { return lightSources; }
         InputDevice* InputHandler() const;
 
     private:
@@ -54,5 +61,6 @@ namespace val_cg {
 
         CameraComponent* camera = nullptr;
         InputDevice* inputDevice = nullptr;
+        std::vector<LightComponent*> lightSources;
     };
 } // val_cg

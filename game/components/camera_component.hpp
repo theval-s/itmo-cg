@@ -25,6 +25,7 @@ namespace val_cg {
         //void Draw() override;  //??? instead we just draw using camera view matrix
         void Update(float deltaTime) override;
         [[nodiscard]] CameraData GetCameraData() const;
+        [[nodiscard]] DirectX::SimpleMath::Vector3 GetPosition() const { return cameraPosition; }
 
         void OnMouseMove(const InputDevice::MouseMoveEventArgs& args);
 

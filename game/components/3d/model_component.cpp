@@ -20,12 +20,14 @@ namespace val_cg {
     }
 
     void ModelComponent::LoadMesh(const std::string& filePath, DirectX::XMFLOAT4 color) {
+        modelFilePath = filePath;
         Assimp::Importer importer;
         const aiScene* scene = importer.ReadFile(filePath,
             aiProcess_Triangulate |
             aiProcess_JoinIdenticalVertices |
             aiProcess_PreTransformVertices |
-            aiProcess_FlipUVs);
+            aiProcess_FlipUVs |
+            aiProcess_GenSmoothNormals);
         // std::cout << "embedded textures: " << scene->mNumTextures << "\n";
         // aiString texPath;
         // auto result = scene->mMaterials[0]->GetTexture(aiTextureType_DIFFUSE, 0, &texPath);
@@ -40,6 +42,7 @@ namespace val_cg {
         points.clear();
         indices.clear();
         meshUVs.clear();
+        meshNormals.clear();
 
         std::vector<DirectX::XMFLOAT3> allPositions;
         int vertexOffset = 0;
@@ -58,6 +61,13 @@ namespace val_cg {
                     meshUVs.emplace_back(tc.x, tc.y);
                 } else {
                     meshUVs.emplace_back(0.f, 0.f);
+                }
+
+                if (mesh->HasNormals()) {
+                    const auto& n = mesh->mNormals[i];
+                    meshNormals.emplace_back(n.x, n.y, n.z);
+                } else {
+                    meshNormals.emplace_back(0.f, 1.f, 0.f);
                 }
             }
 
