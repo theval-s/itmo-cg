@@ -9,6 +9,7 @@
 #include "components/3d/katamari_player_component.hpp"
 #include "components/3d/lit_model_component.hpp"
 #include "components/3d/lights/directional_light_component.hpp"
+#include "components/3d/light_shooter_component.hpp"
 //#include "components/3d/shadow_map_component.hpp"
 #include "game/game.hpp"
 #include "game/components/paddle_component.hpp"
@@ -85,6 +86,8 @@ void GenerateKatamari(val_cg::Game* game) {
     player->SetTerrain(terrain);
     game->Components.push_back(player);
     game->GetCamera()->SetOrbitTarget(&player->GetPosition(), &player->GetRadius(), 8.f);
+
+    game->Components.push_back(new val_cg::LightShooterComponent(game));
 }
 
 int main() {

@@ -70,6 +70,7 @@ namespace val_cg {
                 fc = 0;
             }
             Update(deltaTime);
+            FlushPendingLights();
             Draw();
             renderer.EndFrame();
             fc++;
@@ -121,6 +122,15 @@ namespace val_cg {
 
     InputDevice* Game::InputHandler() const {
         return inputDevice;
+    }
+
+    void Game::FlushPendingLights() {
+        for (auto* l : pendingLights) {
+            l->Initialize();
+            Components.push_back(l);
+            lightSources.push_back(l);
+        }
+        pendingLights.clear();
     }
 
     void Game::UpdateInternal() {

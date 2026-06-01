@@ -149,10 +149,11 @@ namespace val_cg {
         cbData.cameraPos = {cp.x, cp.y, cp.z, 0.f};
 
         const auto& lights = game->GetLights();
-        cbData.lightCount = static_cast<int>(std::min(lights.size(), static_cast<size_t>(MAX_LIGHTS)));
-        for (int i = 0; i < cbData.lightCount; ++i)
+        int lcount = 0;
+        for (size_t i = 0; i < lights.size() && lcount < MAX_LIGHTS; ++i)
             if (lights[i]->active)
-                cbData.lights[i] = lights[i]->GetLightData();
+                cbData.lights[lcount++] = lights[i]->GetLightData();
+        cbData.lightCount = lcount;
 
         D3D11_MAPPED_SUBRESOURCE mapped = {};
         game->renderer.deviceContext->Map(phongCB, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);

@@ -47,6 +47,9 @@ namespace val_cg {
             Components.push_back(l);
             lightSources.push_back(l);
         }
+        //queue to add since those lights are added when loop is active
+        void AddLightDeferred(LightComponent* l) const { pendingLights.push_back(l); }
+        void FlushPendingLights();
         const std::vector<LightComponent*>& GetLights() const { return lightSources; }
         InputDevice* InputHandler() const;
 
@@ -62,5 +65,6 @@ namespace val_cg {
         CameraComponent* camera = nullptr;
         InputDevice* inputDevice = nullptr;
         std::vector<LightComponent*> lightSources;
+        mutable std::vector<LightComponent*> pendingLights;
     };
 } // val_cg
