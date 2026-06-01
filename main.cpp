@@ -54,18 +54,22 @@ void GenerateKatamari(val_cg::Game* game) {
     std::uniform_real_distribution<float> posDist(-12.f, 12.f);
     std::uniform_real_distribution<float> scaleMult(0.7f, 1.6f);
 
-    game->Components.push_back(new val_cg::KatamariFloorComponent(game));
+    auto* terrain = new val_cg::TerrainComponent(game,
+        L"./textures/heightmap.png",
+        L"./textures/terrain_diffuse.png",
+        30.f, 30.f, 5.f);
+    game->Components.push_back(terrain);
+
     auto* sun = new val_cg::DirectionalLightComponent(game, {-1.f,-1.f,-1.f}, {1.f,0.9f,0.8f});
     game->AddLight(sun);
-
-
 
     for (int i = 0; i < 25; ++i) {
         const auto& def = defs[i % 5];
         Vector3 pos{posDist(gen), 0.f, posDist(gen)};
         if (pos.Length() < 2.f) { pos.Normalize(); pos *= 2.f; }
+        pos.y = terrain->GetHeightAt(pos.x, pos.z);
         float s = def.scale * scaleMult(gen);
-        if (i % 5 == 0) { // mouse — has diffuse texture
+        if (i % 5 == 0) {
             game->Components.push_back(new val_cg::TexturedModelComponent(
                 game, def.path, L"./models/mouse_diffuse.png", pos, s));
         } else if (i%5 == 3) {
@@ -76,6 +80,7 @@ void GenerateKatamari(val_cg::Game* game) {
     }
 
     auto* player = new val_cg::KatamariPlayerComponent(game, L"./models/owl.jpg");
+    player->SetTerrain(terrain);
     game->Components.push_back(player);
     game->GetCamera()->SetOrbitTarget(&player->GetPosition(), &player->GetRadius(), 8.f);
 }

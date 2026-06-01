@@ -14,5 +14,6 @@ namespace val_cg {
     constexpr wchar_t TEXTURED_SHADER_PATH[]=L"./shaders/TexturedShader.hlsl";
     constexpr wchar_t SIMPLE_TEXTURED_SHADER_PATH[]=L"./shaders/MegaSimpleTextureShader.hlsl";
     constexpr wchar_t PHONG_SHADER_PATH[]           =L"./shaders/PhongShader.hlsl";
+    constexpr wchar_t TERRAIN_SHADER_PATH[]         =L"./shaders/TerrainShader.hlsl";
 
 }

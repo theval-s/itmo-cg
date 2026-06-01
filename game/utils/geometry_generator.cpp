@@ -140,4 +140,39 @@ namespace val_cg {
         };
         return data;
     }
+
+    MeshData GeometryGenerator::CreateTerrain(int rows, int cols, float width, float depth,
+        const std::vector<float>& heights, float maxHeight)
+    {
+        MeshData data;
+        data.vertices.reserve(rows * cols);
+        float dx = width  / (cols - 1);
+        float dz = depth  / (rows - 1);
+
+        for (int r = 0; r < rows; ++r) {
+            for (int c = 0; c < cols; ++c) {
+                float h = heights[r * cols + c];
+                float x = -width * 0.5f + c * dx;
+                float z = -depth * 0.5f + r * dz;
+                float u = static_cast<float>(c) / (cols - 1);
+                float v = 1.f - static_cast<float>(r) / (rows - 1);
+                // COLOR slot repurposed as UV (xy) for the terrain shader
+                data.vertices.push_back(Vertex({x, h * maxHeight, z, 1.f}, {u, v, 0.f, 1.f}));
+            }
+        }
+
+        data.indices.reserve((rows - 1) * (cols - 1) * 6);
+        for (int r = 0; r < rows - 1; ++r) {
+            for (int c = 0; c < cols - 1; ++c) {
+                int tl = r * cols + c;
+                int tr = tl + 1;
+                int bl = (r + 1) * cols + c;
+                int br = bl + 1;
+                data.indices.push_back(tl); data.indices.push_back(bl); data.indices.push_back(tr);
+                data.indices.push_back(tr); data.indices.push_back(bl); data.indices.push_back(br);
+            }
+        }
+
+        return data;
+    }
 }
