@@ -3,7 +3,7 @@
 //
 
 #include "game.hpp"
-
+#include "components/3d/shadow_map_component.hpp"
 #include <iostream>
 
 namespace val_cg {
@@ -19,19 +19,26 @@ namespace val_cg {
         DestroyResources();
         delete inputDevice;
         delete camera;
+        delete shadowManager;
     }
 
     void Game::DestroyResources() {
+        if (shadowManager) shadowManager->DestroyResources();
         for (auto& comp : Components) {
             comp->DestroyResources();
         }
     }
 
     void Game::Draw() {
-        renderer.deviceContext->OMSetRenderTargets(1, &renderer.renderTargetView, /*nullptr);*/renderer.depthStencilView);
+        // Shadow depth pass (renders to shadow maps before the main color pass)
+        if (shadowManager) {
+            shadowManager->RenderShadowMaps();
+        }
+
+        renderer.deviceContext->OMSetRenderTargets(1, &renderer.renderTargetView, renderer.depthStencilView);
         const float color[] = { 0.f, 0.f, 0.f, 1.0f };
-        renderer.deviceContext->ClearRenderTargetView(renderer.renderTargetView, color); //todo: move out to renderer method?
-        renderer.deviceContext->ClearDepthStencilView(renderer.depthStencilView,D3D11_CLEAR_DEPTH, 1.f, 0.f);
+        renderer.deviceContext->ClearRenderTargetView(renderer.renderTargetView, color);
+        renderer.deviceContext->ClearDepthStencilView(renderer.depthStencilView, D3D11_CLEAR_DEPTH, 1.f, 0.f);
 
         for (auto& comp : Components) {
             comp->Draw();
@@ -102,6 +109,7 @@ namespace val_cg {
     }
 
     void Game::Initialize() {
+        if (shadowManager) shadowManager->Initialize();
         if (camera) camera->Initialize();
         for (auto& comp : Components) {
             comp->Initialize();

@@ -3,8 +3,8 @@
 #define LIGHT_POINT 1
 
 struct LightData {
-    float4 dirOrPos;   // directional: toward-light; point: world position
-    float4 color;      // rgb, w unused
+    float4 dirOrPos;
+    float4 color;
     int    type;
     float  attenConst;
     float  attenLinear;
@@ -23,6 +23,20 @@ cbuffer PhongBuffer : register(b0) {
     float4    matSpecular; // w = shininess (Ns)
 };
 
+cbuffer ShadowBuffer : register(b1) {
+    matrix lightViewProj0;
+    matrix lightViewProj1;
+    matrix lightViewProj2;
+    float4 cascadeSplits;   // x,y = view-space Z end planes of cascades 0 and 1
+    int    shadowsEnabled;
+    float3 _shadowPad;
+};
+
+Texture2D shadowMap0 : register(t0);
+Texture2D shadowMap1 : register(t1);
+Texture2D shadowMap2 : register(t2);
+SamplerComparisonState shadowSampler : register(s0);
+
 struct VS_IN {
     float4 pos    : POSITION0;
     float4 normal : NORMAL0;
@@ -32,6 +46,7 @@ struct PS_IN {
     float4 pos      : SV_POSITION;
     float3 worldPos : TEXCOORD0;
     float3 normal   : TEXCOORD1;
+    float  viewDepth: TEXCOORD2;
 };
 
 PS_IN VSMain(VS_IN input) {
@@ -39,14 +54,50 @@ PS_IN VSMain(VS_IN input) {
     o.pos      = mul(input.pos, worldViewProj);
     o.worldPos = mul(input.pos, world).xyz;
     o.normal   = mul(float4(input.normal.xyz, 0.0f), world).xyz;
+    o.viewDepth = o.pos.w; // equals view-space Z for perspective projection
     return o;
+}
+
+float GetShadowFactor(float3 worldPos, float viewDepth) {
+    [branch]
+    if (!shadowsEnabled) return 1.0;
+
+    static const float bias = 0.002;
+    float4 ls;
+    float2 uv;
+    float  d;
+
+    if (viewDepth < cascadeSplits.x) {
+        ls = mul(float4(worldPos, 1), lightViewProj0);
+        uv = ls.xy / ls.w * float2(0.5, -0.5) + 0.5;
+        d  = ls.z / ls.w - bias;
+        if (uv.x >= 0 && uv.x <= 1 && uv.y >= 0 && uv.y <= 1)
+            return shadowMap0.SampleCmpLevelZero(shadowSampler, uv, d);
+        return 1.0;
+    }
+    if (viewDepth < cascadeSplits.y) {
+        ls = mul(float4(worldPos, 1), lightViewProj1);
+        uv = ls.xy / ls.w * float2(0.5, -0.5) + 0.5;
+        d  = ls.z / ls.w - bias;
+        if (uv.x >= 0 && uv.x <= 1 && uv.y >= 0 && uv.y <= 1)
+            return shadowMap1.SampleCmpLevelZero(shadowSampler, uv, d);
+        return 1.0;
+    }
+    ls = mul(float4(worldPos, 1), lightViewProj2);
+    uv = ls.xy / ls.w * float2(0.5, -0.5) + 0.5;
+    d  = ls.z / ls.w - bias;
+    if (uv.x >= 0 && uv.x <= 1 && uv.y >= 0 && uv.y <= 1)
+        return shadowMap2.SampleCmpLevelZero(shadowSampler, uv, d);
+    return 1.0;
 }
 
 float4 PSMain(PS_IN input) : SV_Target {
     float3 N = normalize(input.normal);
     float3 V = normalize(cameraPos.xyz - input.worldPos);
 
-    float3 result = matAmbient.xyz; // global ambient, added once
+    float shadow = GetShadowFactor(input.worldPos, input.viewDepth);
+
+    float3 result = matAmbient.xyz;
 
     for (int i = 0; i < lightCount; ++i) {
         float3 L;
@@ -67,7 +118,7 @@ float4 PSMain(PS_IN input) : SV_Target {
         float3 diffuse  = max(dot(N, L), 0.0f) * matDiffuse.xyz  * lights[i].color.xyz;
         float3 specular = pow(max(dot(V, R), 0.0f), max(matSpecular.w, 1.0f))
                           * matSpecular.xyz * lights[i].color.xyz;
-        result += (diffuse + specular) * atten;
+        result += (diffuse + specular) * atten * shadow;
     }
 
     return float4(result, 1.0f);

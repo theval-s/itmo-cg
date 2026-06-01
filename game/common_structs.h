@@ -45,4 +45,16 @@ namespace val_cg {
         DirectX::XMFLOAT4 matDiffuse;              // 16
         DirectX::XMFLOAT4 matSpecular;             // 16
     };
+
+    static constexpr int CSM_NUM_CASCADES = 3;
+
+    // Bound to slot b1 in PhongShader, updated once per frame by ShadowMapComponent.
+    struct ShadowCBData {
+        DirectX::SimpleMath::Matrix lightViewProj0;  // 64  – transposed for HLSL
+        DirectX::SimpleMath::Matrix lightViewProj1;  // 64
+        DirectX::SimpleMath::Matrix lightViewProj2;  // 64
+        DirectX::XMFLOAT4 cascadeSplits;             // 16  – x,y = view-Z end of cascade 0,1
+        int  shadowsEnabled;                          // 4
+        float _pad[3];                               // 12
+    }; // 224 bytes
 }

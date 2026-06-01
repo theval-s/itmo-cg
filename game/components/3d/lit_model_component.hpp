@@ -13,8 +13,15 @@ namespace val_cg {
         void Initialize() override;
         void Draw() override;
 
+        // Called by ShadowMapComponent during the depth pass.
+        // Assumes the shadow VS, input layout and depth CB are already bound.
+        void DrawDepth();
+
     private:
         PhongCBData cbData{};
         ID3D11Buffer* phongCB = nullptr;
+
+        ShadowCBData shadowCBData{};
+        ID3D11Buffer* shadowParamsCB = nullptr;  // fallback / updated from shadow manager
     };
 }

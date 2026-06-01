@@ -13,6 +13,8 @@
 #include "../exports.h"
 
 namespace val_cg {
+    class ShadowMapComponent;  // forward declaration
+
     class GAMEFRAMEWORK_API Game {
     public:
         std::chrono::steady_clock::time_point StartTime;
@@ -51,6 +53,10 @@ namespace val_cg {
         void AddLightDeferred(LightComponent* l) const { pendingLights.push_back(l); }
         void FlushPendingLights();
         const std::vector<LightComponent*>& GetLights() const { return lightSources; }
+
+        void SetShadowManager(ShadowMapComponent* sm) { shadowManager = sm; }
+        ShadowMapComponent* GetShadowManager() const  { return shadowManager; }
+
         InputDevice* InputHandler() const;
 
     private:
@@ -66,5 +72,6 @@ namespace val_cg {
         InputDevice* inputDevice = nullptr;
         std::vector<LightComponent*> lightSources;
         mutable std::vector<LightComponent*> pendingLights;
+        ShadowMapComponent* shadowManager = nullptr;
     };
 } // val_cg

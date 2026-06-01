@@ -24,6 +24,7 @@ add_executable(itmo_cg main.cpp
         game/components/3d/katamari_player_component.cpp
         game/components/3d/textured_model_component.cpp
         game/components/3d/lit_model_component.cpp
+        game/components/3d/shadow_map_component.cpp
         game/components/3d/lights/directional_light_component.cpp
         game/components/3d/lights/point_light_component.cpp
         game/components/3d/lights/moving_point_light_component.cpp

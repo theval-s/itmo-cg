@@ -1,4 +1,5 @@
 #include "lit_model_component.hpp"
+#include "shadow_map_component.hpp"
 #include "lights/light_component.hpp"
 #include "game.hpp"
 #include "consts.hpp"
@@ -92,6 +93,9 @@ namespace val_cg {
         cbDesc.ByteWidth      = sizeof(PhongCBData);
         game->renderer.device->CreateBuffer(&cbDesc, nullptr, &phongCB);
 
+        cbDesc.ByteWidth = sizeof(ShadowCBData);
+        game->renderer.device->CreateBuffer(&cbDesc, nullptr, &shadowParamsCB);
+
         CD3D11_RASTERIZER_DESC rastDesc = {};
         rastDesc.CullMode = D3D11_CULL_NONE;
         rastDesc.FillMode = D3D11_FILL_SOLID;
@@ -162,6 +166,30 @@ namespace val_cg {
         game->renderer.deviceContext->VSSetConstantBuffers(0, 1, &phongCB);
         game->renderer.deviceContext->PSSetConstantBuffers(0, 1, &phongCB);
 
+        // Bind shadow resources (b1, t0-t2, s0)
+        auto* shadowMgr = game->GetShadowManager();
+        if (shadowMgr) {
+            shadowMgr->BindForDraw(game->renderer.deviceContext);
+        } else {
+            // No shadow manager: send a disabled shadow CB so the shader skips sampling
+            shadowCBData.shadowsEnabled = 0;
+            D3D11_MAPPED_SUBRESOURCE smap = {};
+            game->renderer.deviceContext->Map(shadowParamsCB, 0, D3D11_MAP_WRITE_DISCARD, 0, &smap);
+            memcpy(smap.pData, &shadowCBData, sizeof(ShadowCBData));
+            game->renderer.deviceContext->Unmap(shadowParamsCB, 0);
+            game->renderer.deviceContext->PSSetConstantBuffers(1, 1, &shadowParamsCB);
+        }
+
         game->renderer.deviceContext->DrawIndexed(static_cast<UINT>(indices.size()), 0, 0);
+    }
+
+    void LitModelComponent::DrawDepth() {
+        auto* ctx = game->renderer.deviceContext;
+        ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        constexpr UINT stride = sizeof(PhongVertex);
+        constexpr UINT offset = 0;
+        ctx->IASetVertexBuffers(0, 1, &vb, &stride, &offset);
+        ctx->IASetIndexBuffer(ib, DXGI_FORMAT_R32_UINT, 0);
+        ctx->DrawIndexed(static_cast<UINT>(indices.size()), 0, 0);
     }
 }
