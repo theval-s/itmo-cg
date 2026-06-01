@@ -116,6 +116,7 @@ namespace val_cg {
         camera = new CameraComponent(this);
         camera->SetPosition({-10.f,0.f,1.5f});
         camera->Initialize();
+        isCameraCreated = true;
     }
 
     InputDevice* Game::InputHandler() const {

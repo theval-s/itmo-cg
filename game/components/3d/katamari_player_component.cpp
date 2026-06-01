@@ -342,10 +342,26 @@ namespace val_cg {
         auto* input = game->InputHandler();
         Vector3 moveDir = Vector3::Zero;
         if (input) {
-            if (input->IsKeyDown(Keys::Up))    moveDir.z += 1.f;
-            if (input->IsKeyDown(Keys::Down))  moveDir.z -= 1.f;
-            if (input->IsKeyDown(Keys::Left))  moveDir.x += 1.f;
-            if (input->IsKeyDown(Keys::Right)) moveDir.x -= 1.f;
+            // Camera orbits the ball, so forward = ball - cameraPos projected flat.
+            Vector3 camForward = Vector3::UnitZ;
+            Vector3 camLeft   = Vector3::UnitX;
+            if (game->IsCameraCreated()) {
+                camForward = position - game->GetCamera()->GetPosition();
+                camForward.y = 0;
+                if (camForward.LengthSquared() > 1e-6f) camForward.Normalize();
+                camLeft = Vector3::Up.Cross(camForward);
+                if (camLeft.LengthSquared() > 1e-6f) camLeft.Normalize();
+            }
+
+            if (input->IsKeyDown(Keys::Up))    moveDir += camForward;
+            if (input->IsKeyDown(Keys::Down))  moveDir -= camForward;
+            if (input->IsKeyDown(Keys::Left))  moveDir += camLeft;
+            if (input->IsKeyDown(Keys::Right)) moveDir -= camLeft;
+
+            // if (input->IsKeyDown(Keys::Up))    moveDir.z += 1.f;
+            // if (input->IsKeyDown(Keys::Down))  moveDir.z -= 1.f;
+            // if (input->IsKeyDown(Keys::Left))  moveDir.x += 1.f;
+            // if (input->IsKeyDown(Keys::Right)) moveDir.x -= 1.f;
         }
 
         if (moveDir.LengthSquared() > 0.f) {
