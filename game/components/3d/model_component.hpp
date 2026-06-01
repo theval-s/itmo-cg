@@ -32,6 +32,8 @@ namespace val_cg {
             // store offset in local ball space (rotTarget is orthogonal → transpose = inverse)
             attachOffset = DirectX::SimpleMath::Vector3::TransformNormal(
                 worldOffset, rotTarget->Transpose());
+            // save ball's rotation at attach time so we can apply only the delta each frame
+            attachRotationOffset = rotTarget->Transpose();
         }
         const DirectX::BoundingSphere& GetCollider() const { return collider; }
         float GetObjectRadius() const { return collider.Radius; }
@@ -44,6 +46,7 @@ namespace val_cg {
         const DirectX::SimpleMath::Vector3* attachPoint    = nullptr;
         const DirectX::SimpleMath::Matrix* attachRotation  = nullptr;
         DirectX::SimpleMath::Vector3 attachOffset{};
+        DirectX::SimpleMath::Matrix attachRotationOffset{};
         std::vector<DirectX::XMFLOAT2> meshUVs;
         std::vector<DirectX::XMFLOAT3> meshNormals;
         std::string modelFilePath;

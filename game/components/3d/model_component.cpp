@@ -100,7 +100,7 @@ namespace val_cg {
                 DirectX::SimpleMath::Vector3::TransformNormal(attachOffset, *attachRotation);
             worldMatrix =
                 Matrix::CreateScale(scaleVal) *
-                (*attachRotation) *
+                (attachRotationOffset * (*attachRotation)) *
                 Matrix::CreateTranslation(worldPos);
         }
         else {
