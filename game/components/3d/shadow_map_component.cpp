@@ -210,7 +210,7 @@ namespace val_cg {
 
             for (auto* comp : game->Components) {
                 if (auto* lit = dynamic_cast<LitModelComponent*>(comp)) {
-                    Matrix wlvp = (lit->GetWorldMatrix() * lightVP[c]).Transpose();
+                    Matrix wlvp = (lit->GetWorldMatrix() * lightVP[c]);
                     D3D11_MAPPED_SUBRESOURCE mapped;
                     ctx->Map(depthPassCB, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
                     memcpy(mapped.pData, &wlvp, sizeof(Matrix));
@@ -222,9 +222,9 @@ namespace val_cg {
 
         // Update the per-frame shadow params CB consumed by PhongShader
         ShadowCBData sd{};
-        sd.lightViewProj0   = lightVP[0].Transpose();
-        sd.lightViewProj1   = lightVP[1].Transpose();
-        sd.lightViewProj2   = lightVP[2].Transpose();
+        sd.lightViewProj0   = lightVP[0];
+        sd.lightViewProj1   = lightVP[1];
+        sd.lightViewProj2   = lightVP[2];
         sd.cascadeSplits    = {cascadeSplits[0], cascadeSplits[1], cascadeSplits[2], 0.f};
         sd.shadowsEnabled   = 1;
 

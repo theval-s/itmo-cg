@@ -10,7 +10,7 @@
 #include "components/3d/lit_model_component.hpp"
 #include "components/3d/lights/directional_light_component.hpp"
 #include "components/3d/light_shooter_component.hpp"
-//#include "components/3d/shadow_map_component.hpp"
+#include "components/3d/shadow_map_component.hpp"
 #include "game/game.hpp"
 #include "game/components/paddle_component.hpp"
 #include <random>
@@ -64,7 +64,7 @@ void GenerateKatamari(val_cg::Game* game) {
 
     auto* sun = new val_cg::DirectionalLightComponent(game, {0,1.f,0}, {1.f,0.9f,0.8f});
     game->AddLight(sun);
-    //game->SetShadowManager(new val_cg::ShadowMapComponent(game, sun));
+    game->SetShadowManager(new val_cg::ShadowMapComponent(game, sun));
 
     for (int i = 0; i < 25; ++i) {
         const auto& def = defs[i % 5];
