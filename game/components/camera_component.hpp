@@ -26,6 +26,7 @@ namespace val_cg {
         void Update(float deltaTime) override;
         [[nodiscard]] CameraData GetCameraData() const;
         [[nodiscard]] DirectX::SimpleMath::Vector3 GetPosition() const { return cameraPosition; }
+        [[nodiscard]] DirectX::SimpleMath::Vector3 GetForward() const { return forward; }
 
         void OnMouseMove(const InputDevice::MouseMoveEventArgs& args);
 
@@ -35,6 +36,7 @@ namespace val_cg {
     private:
         DirectX::SimpleMath::Vector3 cameraPosition;
         DirectX::SimpleMath::Vector3 cameraRotation;
+        DirectX::SimpleMath::Vector3 forward;
         const DirectX::SimpleMath::Vector3* orbitTarget = nullptr;
         const float* orbitTargetRadius = nullptr;
         float orbitDistance = 5.f;

@@ -342,11 +342,10 @@ namespace val_cg {
         auto* input = game->InputHandler();
         Vector3 moveDir = Vector3::Zero;
         if (input) {
-            // Camera orbits the ball, so forward = ball - cameraPos projected flat.
             Vector3 camForward = Vector3::UnitZ;
             Vector3 camLeft   = Vector3::UnitX;
             if (game->IsCameraCreated()) {
-                camForward = position - game->GetCamera()->GetPosition();
+                camForward = game->GetCamera()->GetForward();
                 camForward.y = 0;
                 if (camForward.LengthSquared() > 1e-6f) camForward.Normalize();
                 camLeft = Vector3::Up.Cross(camForward);

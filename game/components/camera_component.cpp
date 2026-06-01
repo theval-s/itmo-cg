@@ -45,6 +45,7 @@ void val_cg::CameraComponent::Update(float deltaTime) {
     if (!input) return;
 
     auto rot = Matrix::CreateFromYawPitchRoll(cameraRotation);
+    forward = rot.Forward();
 
     if (orbitTarget) {
         constexpr float zoomSpeed = 5.f;
