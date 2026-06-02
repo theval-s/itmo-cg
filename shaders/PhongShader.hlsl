@@ -70,7 +70,7 @@ float GetShadowFactor(float3 worldPos, float viewDepth) {
     if (viewDepth < cascadeSplits.x) {
         ls = mul(float4(worldPos, 1), lightViewProj0);
         uv = ls.xy / ls.w * float2(0.5, -0.5) + 0.5;
-        d  = ls.z / ls.w - bias;
+        d  = saturate(ls.z / ls.w - bias);
         if (uv.x >= 0 && uv.x <= 1 && uv.y >= 0 && uv.y <= 1)
             return shadowMap0.SampleCmpLevelZero(shadowSampler, uv, d);
         return 1.0;
@@ -78,14 +78,14 @@ float GetShadowFactor(float3 worldPos, float viewDepth) {
     if (viewDepth < cascadeSplits.y) {
         ls = mul(float4(worldPos, 1), lightViewProj1);
         uv = ls.xy / ls.w * float2(0.5, -0.5) + 0.5;
-        d  = ls.z / ls.w - bias;
+        d  = saturate(ls.z / ls.w - bias);
         if (uv.x >= 0 && uv.x <= 1 && uv.y >= 0 && uv.y <= 1)
             return shadowMap1.SampleCmpLevelZero(shadowSampler, uv, d);
         return 1.0;
     }
     ls = mul(float4(worldPos, 1), lightViewProj2);
     uv = ls.xy / ls.w * float2(0.5, -0.5) + 0.5;
-    d  = ls.z / ls.w - bias;
+    d  = saturate(ls.z / ls.w - bias);
     if (uv.x >= 0 && uv.x <= 1 && uv.y >= 0 && uv.y <= 1)
         return shadowMap2.SampleCmpLevelZero(shadowSampler, uv, d);
     return 1.0;

@@ -7,7 +7,6 @@
 namespace val_cg {
     class Game;
     class DirectionalLightComponent;
-    class LitModelComponent;
 
     class ShadowMapComponent : public GameComponent {
     public:

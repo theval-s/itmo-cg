@@ -68,5 +68,8 @@ namespace val_cg {
         ID3D11Buffer* phongCB = nullptr;
         ShadowCBData shadowCBData{};
         ID3D11Buffer* shadowParamsCB = nullptr;
+
+        ID3D11ShaderResourceView* srv_     = nullptr;
+        ID3D11SamplerState*       sampler_ = nullptr;
     };
 }

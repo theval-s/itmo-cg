@@ -14,6 +14,7 @@
 #include "Keys.h"
 #include <cmath>
 #include <algorithm>
+#include <WICTextureLoader.h>
 
 namespace val_cg {
     using namespace DirectX::SimpleMath;
@@ -242,22 +243,22 @@ namespace val_cg {
         ID3DBlob* errorCode = nullptr;
         auto* dev = game->renderer.device.Get();
 
-        HRESULT res = D3DCompileFromFile(PHONG_SHADER_PATH, nullptr, nullptr,
+        HRESULT res = D3DCompileFromFile(SIMPLE_TEXTURED_SHADER_PATH, nullptr, nullptr,
             "VSMain", "vs_5_0",
             D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0,
             &vertexShaderByteCode, &errorCode);
         if (FAILED(res)) {
             if (errorCode) { std::cerr << (char*)errorCode->GetBufferPointer(); errorCode->Release(); }
-            else throw std::runtime_error("PhongShader.hlsl not found");
+            else throw std::runtime_error("MegaSimpleTextureShader.hlsl not found");
         }
 
-        res = D3DCompileFromFile(PHONG_SHADER_PATH, nullptr, nullptr,
+        res = D3DCompileFromFile(SIMPLE_TEXTURED_SHADER_PATH, nullptr, nullptr,
             "PSMain", "ps_5_0",
             D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0,
             &pixelShaderByteCode, &errorCode);
         if (FAILED(res)) {
             if (errorCode) { std::cerr << (char*)errorCode->GetBufferPointer(); errorCode->Release(); }
-            else throw std::runtime_error("PhongShader.hlsl not found");
+            else throw std::runtime_error("MegaSimpleTextureShader.hlsl not found");
         }
 
         dev->CreateVertexShader(vertexShaderByteCode->GetBufferPointer(),
@@ -268,7 +269,7 @@ namespace val_cg {
         D3D11_INPUT_ELEMENT_DESC inputElements[] = {
             {"POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0,
              D3D11_INPUT_PER_VERTEX_DATA, 0},
-            {"NORMAL",   0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT,
+            {"COLOR",    0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT,
              D3D11_INPUT_PER_VERTEX_DATA, 0},
         };
         dev->CreateInputLayout(inputElements, 2,
@@ -313,9 +314,19 @@ namespace val_cg {
         rastDesc.FillMode = D3D11_FILL_SOLID;
         dev->CreateRasterizerState(&rastDesc, &rastState);
 
-        cbData.matAmbient  = {0.1f, 0.1f, 0.1f, 0.f};
-        cbData.matDiffuse  = {0.8f, 0.8f, 0.8f, 0.f};
-        cbData.matSpecular = {1.0f, 1.0f, 1.0f, 32.f};
+        cbData.matAmbient  = {0.15f, 0.15f, 0.15f, 0.f};
+        cbData.matDiffuse  = {0.9f, 0.9f, 0.9f, 0.f};
+        cbData.matSpecular = {0.4f, 0.4f, 0.4f, 8.f};
+
+        // Cobblestone diffuse texture
+        DirectX::CreateWICTextureFromFile(dev, L"./textures/cobblestone.png",
+            nullptr, &srv_);
+
+        D3D11_SAMPLER_DESC sampDesc = {};
+        sampDesc.Filter   = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+        sampDesc.AddressU = sampDesc.AddressV = sampDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+        sampDesc.MaxLOD   = D3D11_FLOAT32_MAX;
+        dev->CreateSamplerState(&sampDesc, &sampler_);
 
         rollRotation = Quaternion::Identity;
         rollMatrix   = Matrix::Identity;
@@ -436,6 +447,9 @@ namespace val_cg {
             ctx->Unmap(shadowParamsCB, 0);
             ctx->PSSetConstantBuffers(1, 1, &shadowParamsCB);
         }
+
+        ctx->PSSetShaderResources(3, 1, &srv_);
+        ctx->PSSetSamplers(1, 1, &sampler_);
 
         ctx->DrawIndexed(static_cast<UINT>(indices.size()), 0, 0);
     }

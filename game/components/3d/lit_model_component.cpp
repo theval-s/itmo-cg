@@ -123,6 +123,7 @@ namespace val_cg {
 
         collider.Radius = baseBoundingRadius * scaleVal;
         collider.Center = {worldPos.x, worldPos.y, worldPos.z};
+
     }
 
     void LitModelComponent::Draw() {

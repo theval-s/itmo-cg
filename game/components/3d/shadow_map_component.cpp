@@ -87,9 +87,9 @@ namespace val_cg {
         D3D11_RASTERIZER_DESC rastDesc = {};
         rastDesc.FillMode              = D3D11_FILL_SOLID;
         rastDesc.CullMode              = D3D11_CULL_NONE;
-        rastDesc.DepthBias             = 10000;
-        rastDesc.SlopeScaledDepthBias  = 2.0f;
-        rastDesc.DepthClipEnable       = TRUE;
+        rastDesc.DepthBias             = 5000;
+        rastDesc.SlopeScaledDepthBias  = 1.0f;
+        rastDesc.DepthClipEnable       = FALSE;  // clamp rather than clip out-of-range depths
         device->CreateRasterizerState(&rastDesc, &shadowRastState);
 
         // Depth-stencil state
@@ -140,7 +140,7 @@ namespace val_cg {
             Vector4 v{ndc[i].x, ndc[i].y, ndc[i].z, 1.f};
             v = Vector4::Transform(v, invVP);
             v /= v.w;
-            worldCorners[i] = {v.x, v.y, v.z};
+            worldCorners[i] = Vector3(v.x, v.y, v.z);
         }
 
         // Build light view matrix (directional: position along toward-light direction)
@@ -151,10 +151,30 @@ namespace val_cg {
         Vector3 up = (fabsf(lightDir.y) > 0.99f) ? Vector3{1,0,0} : Vector3{0,1,0};
         Matrix lightView = Matrix::CreateLookAt(lightPos, Vector3::Zero, up);
 
+        // DEBUG: print once per ~120 frames
+        // static int dbgFrame = 0;
+        // bool dbg = (dbgFrame++ % 120 == 0);
+        // if (dbg) {
+        //     std::cerr << "[CSM-DBG] lightDir=(" << lightDir.x << "," << lightDir.y << "," << lightDir.z
+        //               << ") lightPos=(" << lightPos.x << "," << lightPos.y << "," << lightPos.z << ")\n";
+        //     std::cerr << "[CSM-DBG] worldCorners near[0]=(" << worldCorners[0].x << "," << worldCorners[0].y << "," << worldCorners[0].z << ")"
+        //               << " far[7]=(" << worldCorners[7].x << "," << worldCorners[7].y << "," << worldCorners[7].z << ")\n";
+        //     // also print all 8 corners' light-space Z
+        //     std::cerr << "[CSM-DBG] full frustum lc.z: ";
+        //     for (int i = 0; i < 8; ++i) {
+        //         Vector4 lc = Vector4::Transform(Vector4{worldCorners[i].x, worldCorners[i].y, worldCorners[i].z, 1.f}, lightView);
+        //         std::cerr << lc.z << " ";
+        //     }
+        //     std::cerr << "\n";
+        // }
+
+        // worldCorners span the full camera frustum [camNear, camFar=100].
+        // Fracs must be relative to that range, not SHADOW_FAR.
+        constexpr float CAM_FAR = 100.f;
         float prevSplit = 0.001f;
         for (int c = 0; c < NUM_CASCADES; ++c) {
-            float nearFrac = prevSplit      / SHADOW_FAR;
-            float farFrac  = cascadeSplits[c] / SHADOW_FAR;
+            float nearFrac = prevSplit        / CAM_FAR;
+            float farFrac  = cascadeSplits[c] / CAM_FAR;
 
             // Sub-frustum corners by linear interpolation along the frustum rays
             Vector3 sub[8];
@@ -176,10 +196,19 @@ namespace val_cg {
                 minZ = min(minZ, lc.z); maxZ = max(maxZ, lc.z);
             }
 
-            // Extend Z backward to catch shadow casters behind the view frustum
             constexpr float zSlack = 20.f;
+            // if (dbg) {
+            //     std::cerr << "[CSM-DBG] cascade " << c
+            //               << " nearFrac=" << nearFrac << " farFrac=" << farFrac
+            //               << " minZ=" << minZ << " maxZ=" << maxZ
+            //               << " nearZ=" << (-maxZ-zSlack) << " farZ=" << (-minZ+zSlack) << "\n";
+            // }
+
+            // CreateOrthographicOffCenter is RH: near/far must be positive distances
+            // (maps z=-near → NDC 0, z=-far → NDC 1). minZ/maxZ are negative RH Z values,
+            // so negate them: -maxZ is the closest distance, -minZ is the farthest.
             Matrix lightProj = Matrix::CreateOrthographicOffCenter(
-                minX, maxX, minY, maxY, minZ - zSlack, maxZ);
+                minX, maxX, minY, maxY, -maxZ - zSlack, -minZ + zSlack);
 
             lightVP[c] = lightView * lightProj;
             prevSplit = cascadeSplits[c];
@@ -204,13 +233,20 @@ namespace val_cg {
         ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
         ctx->VSSetConstantBuffers(0, 1, &depthPassCB);
 
-        for (int c = 0; c < NUM_CASCADES; ++c) {
-            ctx->OMSetRenderTargets(0, nullptr, shadowDSVs[c]);
+        // Explicitly unbind shadow SRVs before binding the same textures as DSVs.
+    // D3D11 should auto-unbind on resource hazard, but some drivers don't flush it in time.
+    ID3D11ShaderResourceView* nullSRVs[3] = {};
+    ctx->PSSetShaderResources(0, 3, nullSRVs);
+
+    ID3D11RenderTargetView* nullRTV = nullptr;
+
+    for (int c = 0; c < NUM_CASCADES; ++c) {
+            ctx->OMSetRenderTargets(1, &nullRTV, shadowDSVs[c]);
             ctx->ClearDepthStencilView(shadowDSVs[c], D3D11_CLEAR_DEPTH, 1.f, 0);
 
             for (auto* comp : game->Components) {
                 if (auto* lit = dynamic_cast<LitModelComponent*>(comp)) {
-                    Matrix wlvp = (lit->GetWorldMatrix() * lightVP[c]);
+                    Matrix wlvp = (lit->GetWorldMatrix() * lightVP[c]).Transpose();
                     D3D11_MAPPED_SUBRESOURCE mapped;
                     ctx->Map(depthPassCB, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
                     memcpy(mapped.pData, &wlvp, sizeof(Matrix));
@@ -222,9 +258,9 @@ namespace val_cg {
 
         // Update the per-frame shadow params CB consumed by PhongShader
         ShadowCBData sd{};
-        sd.lightViewProj0   = lightVP[0];
-        sd.lightViewProj1   = lightVP[1];
-        sd.lightViewProj2   = lightVP[2];
+        sd.lightViewProj0   = lightVP[0].Transpose();
+        sd.lightViewProj1   = lightVP[1].Transpose();
+        sd.lightViewProj2   = lightVP[2].Transpose();
         sd.cascadeSplits    = {cascadeSplits[0], cascadeSplits[1], cascadeSplits[2], 0.f};
         sd.shadowsEnabled   = 1;
 
