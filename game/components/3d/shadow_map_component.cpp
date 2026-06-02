@@ -1,6 +1,6 @@
 #include "shadow_map_component.hpp"
 #include "lights/directional_light_component.hpp"
-#include "lit_model_component.hpp"
+#include "lit_mesh_component.hpp"
 #include "game.hpp"
 #include "consts.hpp"
 #include <d3dcompiler.h>
@@ -266,7 +266,7 @@ namespace val_cg {
             ctx->ClearDepthStencilView(shadowDSVs[c], D3D11_CLEAR_DEPTH, 1.f, 0);
 
             for (auto* comp : game->Components) {
-                if (auto* lit = dynamic_cast<LitModelComponent*>(comp)) {
+                if (auto* lit = dynamic_cast<LitMeshComponent*>(comp)) {
                     Matrix wlvp = (lit->GetWorldMatrix() * lightVP[c]).Transpose();
                     D3D11_MAPPED_SUBRESOURCE mapped;
                     ctx->Map(depthPassCB, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);

@@ -3,8 +3,7 @@
 //
 
 #pragma once
-#include "mesh_component.hpp"
-#include "common_structs.h"
+#include "lit_mesh_component.hpp"
 #include <DirectXCollision.h>
 #include <string>
 #include <vector>
@@ -43,7 +42,7 @@ namespace val_cg {
     };
 
     // ball that acts as a player
-    class KatamariPlayerComponent : public MeshComponent {
+    class KatamariPlayerComponent : public LitMeshComponent {
     public:
         explicit KatamariPlayerComponent(Game* game);
 
@@ -64,12 +63,7 @@ namespace val_cg {
 
         void CheckCollision();
 
-        PhongCBData cbData{};
-        ID3D11Buffer* phongCB = nullptr;
-        ShadowCBData shadowCBData{};
-        ID3D11Buffer* shadowParamsCB = nullptr;
-
-        ID3D11ShaderResourceView* srv_     = nullptr;
+        ID3D11ShaderResourceView* srv_    = nullptr;
         ID3D11SamplerState*       sampler_ = nullptr;
     };
 }

@@ -1,6 +1,4 @@
 #include "lit_model_component.hpp"
-#include "shadow_map_component.hpp"
-#include "lights/light_component.hpp"
 #include "game.hpp"
 #include "consts.hpp"
 #include <assimp/Importer.hpp>
@@ -17,7 +15,9 @@ namespace val_cg {
                                          const std::string& filePath,
                                          Vector3 position,
                                          float scale)
-        : ModelComponent(game, filePath, position, scale, {0.8f, 0.8f, 0.8f, 1.f})
+        : MeshComponent(game)   // explicit virtual-base init
+        , LitMeshComponent(game)
+        , ModelComponent(game, filePath, position, scale, {0.8f, 0.8f, 0.8f, 1.f})
     {}
 
     void LitModelComponent::Initialize() {
@@ -58,13 +58,13 @@ namespace val_cg {
             vertexShaderByteCode->GetBufferPointer(),
             vertexShaderByteCode->GetBufferSize(), &layout);
 
-        // Build PhongVertex buffer: points[] is interleaved {pos, color} pairs
+        // Build PhongVertex buffer from loaded positions and normals.
         int vertexCount = static_cast<int>(points.size()) / 2;
         std::vector<PhongVertex> phongVerts;
         phongVerts.reserve(vertexCount);
         for (int i = 0; i < vertexCount; ++i) {
             PhongVertex pv;
-            pv.position = points[i * 2]; // even = position
+            pv.position = points[i * 2];
             const auto& n = (i < static_cast<int>(meshNormals.size()))
                             ? meshNormals[i]
                             : DirectX::XMFLOAT3{0.f, 1.f, 0.f};
@@ -86,22 +86,14 @@ namespace val_cg {
         D3D11_SUBRESOURCE_DATA ibData = {indices.data()};
         game->renderer.device->CreateBuffer(&ibDesc, &ibData, &ib);
 
-        D3D11_BUFFER_DESC cbDesc = {};
-        cbDesc.Usage          = D3D11_USAGE_DYNAMIC;
-        cbDesc.BindFlags      = D3D11_BIND_CONSTANT_BUFFER;
-        cbDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-        cbDesc.ByteWidth      = sizeof(PhongCBData);
-        game->renderer.device->CreateBuffer(&cbDesc, nullptr, &phongCB);
-
-        cbDesc.ByteWidth = sizeof(ShadowCBData);
-        game->renderer.device->CreateBuffer(&cbDesc, nullptr, &shadowParamsCB);
+        InitLitBuffers();
 
         CD3D11_RASTERIZER_DESC rastDesc = {};
         rastDesc.CullMode = D3D11_CULL_NONE;
         rastDesc.FillMode = D3D11_FILL_SOLID;
         game->renderer.device->CreateRasterizerState(&rastDesc, &rastState);
 
-        // Read MTL material via a quick Assimp reload (no geometry processing needed)
+        // Read material properties from MTL via Assimp.
         aiColor3D ka(0.1f, 0.1f, 0.1f);
         aiColor3D kd(0.8f, 0.8f, 0.8f);
         aiColor3D ks(1.0f, 1.0f, 1.0f);
@@ -123,74 +115,30 @@ namespace val_cg {
 
         collider.Radius = baseBoundingRadius * scaleVal;
         collider.Center = {worldPos.x, worldPos.y, worldPos.z};
-
     }
 
     void LitModelComponent::Draw() {
-        game->renderer.deviceContext->RSSetState(rastState);
+        auto* ctx = game->renderer.deviceContext;
+        ctx->RSSetState(rastState);
 
         D3D11_VIEWPORT viewport = {};
         viewport.Width    = static_cast<float>(game->renderer.ScreenWidth);
         viewport.Height   = static_cast<float>(game->renderer.ScreenHeight);
         viewport.MaxDepth = 1.0f;
-        game->renderer.deviceContext->RSSetViewports(1, &viewport);
+        ctx->RSSetViewports(1, &viewport);
 
-        game->renderer.deviceContext->IASetInputLayout(layout);
-        game->renderer.deviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-        constexpr UINT stride = sizeof(PhongVertex); // 32
-        constexpr UINT offset = 0;
-        game->renderer.deviceContext->IASetVertexBuffers(0, 1, &vb, &stride, &offset);
-        game->renderer.deviceContext->IASetIndexBuffer(ib, DXGI_FORMAT_R32_UINT, 0);
-
-        game->renderer.deviceContext->VSSetShader(vertexShader, nullptr, 0);
-        game->renderer.deviceContext->PSSetShader(pixelShader, nullptr, 0);
-
-        const auto camData = game->GetCameraData();
-        cbData.worldViewProj = (worldMatrix * camData.viewMatrix * camData.projMatrix).Transpose();
-        cbData.world         = worldMatrix.Transpose();
-
-        Vector3 cp = game->GetCamera()->GetPosition();
-        cbData.cameraPos = {cp.x, cp.y, cp.z, 0.f};
-
-        const auto& lights = game->GetLights();
-        int lcount = 0;
-        for (size_t i = 0; i < lights.size() && lcount < MAX_LIGHTS; ++i)
-            if (lights[i]->active)
-                cbData.lights[lcount++] = lights[i]->GetLightData();
-        cbData.lightCount = lcount;
-
-        D3D11_MAPPED_SUBRESOURCE mapped = {};
-        game->renderer.deviceContext->Map(phongCB, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
-        memcpy(mapped.pData, &cbData, sizeof(PhongCBData));
-        game->renderer.deviceContext->Unmap(phongCB, 0);
-        game->renderer.deviceContext->VSSetConstantBuffers(0, 1, &phongCB);
-        game->renderer.deviceContext->PSSetConstantBuffers(0, 1, &phongCB);
-
-        // Bind shadow resources (b1, t0-t2, s0)
-        auto* shadowMgr = game->GetShadowManager();
-        if (shadowMgr) {
-            shadowMgr->BindForDraw(game->renderer.deviceContext);
-        } else {
-            // No shadow manager: send a disabled shadow CB so the shader skips sampling
-            shadowCBData.shadowsEnabled = 0;
-            D3D11_MAPPED_SUBRESOURCE smap = {};
-            game->renderer.deviceContext->Map(shadowParamsCB, 0, D3D11_MAP_WRITE_DISCARD, 0, &smap);
-            memcpy(smap.pData, &shadowCBData, sizeof(ShadowCBData));
-            game->renderer.deviceContext->Unmap(shadowParamsCB, 0);
-            game->renderer.deviceContext->PSSetConstantBuffers(1, 1, &shadowParamsCB);
-        }
-
-        game->renderer.deviceContext->DrawIndexed(static_cast<UINT>(indices.size()), 0, 0);
-    }
-
-    void LitModelComponent::DrawDepth() {
-        auto* ctx = game->renderer.deviceContext;
+        ctx->IASetInputLayout(layout);
         ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
         constexpr UINT stride = sizeof(PhongVertex);
         constexpr UINT offset = 0;
         ctx->IASetVertexBuffers(0, 1, &vb, &stride, &offset);
         ctx->IASetIndexBuffer(ib, DXGI_FORMAT_R32_UINT, 0);
+        ctx->VSSetShader(vertexShader, nullptr, 0);
+        ctx->PSSetShader(pixelShader, nullptr, 0);
+
+        BindPhongCB(worldMatrix);
+        BindShadow();
+
         ctx->DrawIndexed(static_cast<UINT>(indices.size()), 0, 0);
     }
 }

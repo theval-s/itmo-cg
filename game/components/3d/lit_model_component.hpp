@@ -1,9 +1,12 @@
 #pragma once
 #include "model_component.hpp"
-#include "common_structs.h"
+#include "lit_mesh_component.hpp"
 
 namespace val_cg {
-    class LitModelComponent : public ModelComponent {
+    // Phong-lit OBJ model. Inherits geometry/collision from ModelComponent and
+    // Phong/shadow CB machinery from LitMeshComponent. The shared MeshComponent
+    // base is resolved via virtual inheritance in both parents.
+    class LitModelComponent : public LitMeshComponent, public ModelComponent {
     public:
         LitModelComponent(Game* game,
                           const std::string& filePath,
@@ -12,16 +15,6 @@ namespace val_cg {
 
         void Initialize() override;
         void Draw() override;
-
-        // Called by ShadowMapComponent during the depth pass.
-        // Assumes the shadow VS, input layout and depth CB are already bound.
-        void DrawDepth();
-
-    private:
-        PhongCBData cbData{};
-        ID3D11Buffer* phongCB = nullptr;
-
-        ShadowCBData shadowCBData{};
-        ID3D11Buffer* shadowParamsCB = nullptr;  // fallback / updated from shadow manager
+        // DrawDepth() is inherited from LitMeshComponent.
     };
 }

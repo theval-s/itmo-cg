@@ -228,6 +228,7 @@ namespace val_cg {
 
     KatamariPlayerComponent::KatamariPlayerComponent(Game* game)
         : MeshComponent(game)
+        , LitMeshComponent(game)
     {
         points.clear();
         indices.clear();
@@ -299,15 +300,7 @@ namespace val_cg {
         D3D11_SUBRESOURCE_DATA ibData = {indices.data()};
         dev->CreateBuffer(&ibDesc, &ibData, &ib);
 
-        D3D11_BUFFER_DESC cbDesc = {};
-        cbDesc.Usage          = D3D11_USAGE_DYNAMIC;
-        cbDesc.BindFlags      = D3D11_BIND_CONSTANT_BUFFER;
-        cbDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-        cbDesc.ByteWidth      = sizeof(PhongCBData);
-        dev->CreateBuffer(&cbDesc, nullptr, &phongCB);
-
-        cbDesc.ByteWidth = sizeof(ShadowCBData);
-        dev->CreateBuffer(&cbDesc, nullptr, &shadowParamsCB);
+        InitLitBuffers();
 
         CD3D11_RASTERIZER_DESC rastDesc = {};
         rastDesc.CullMode = D3D11_CULL_NONE;
@@ -415,38 +408,8 @@ namespace val_cg {
         ctx->VSSetShader(vertexShader, nullptr, 0);
         ctx->PSSetShader(pixelShader, nullptr, 0);
 
-        const auto camData = game->GetCameraData();
-        cbData.worldViewProj = (worldMatrix * camData.viewMatrix * camData.projMatrix).Transpose();
-        cbData.world         = worldMatrix.Transpose();
-
-        Vector3 cp = game->GetCamera()->GetPosition();
-        cbData.cameraPos = {cp.x, cp.y, cp.z, 0.f};
-
-        const auto& lights = game->GetLights();
-        int lcount = 0;
-        for (size_t i = 0; i < lights.size() && lcount < MAX_LIGHTS; ++i)
-            if (lights[i]->active)
-                cbData.lights[lcount++] = lights[i]->GetLightData();
-        cbData.lightCount = lcount;
-
-        D3D11_MAPPED_SUBRESOURCE mapped = {};
-        ctx->Map(phongCB, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
-        memcpy(mapped.pData, &cbData, sizeof(PhongCBData));
-        ctx->Unmap(phongCB, 0);
-        ctx->VSSetConstantBuffers(0, 1, &phongCB);
-        ctx->PSSetConstantBuffers(0, 1, &phongCB);
-
-        auto* shadowMgr = game->GetShadowManager();
-        if (shadowMgr) {
-            shadowMgr->BindForDraw(ctx);
-        } else {
-            shadowCBData.shadowsEnabled = 0;
-            D3D11_MAPPED_SUBRESOURCE smap = {};
-            ctx->Map(shadowParamsCB, 0, D3D11_MAP_WRITE_DISCARD, 0, &smap);
-            memcpy(smap.pData, &shadowCBData, sizeof(ShadowCBData));
-            ctx->Unmap(shadowParamsCB, 0);
-            ctx->PSSetConstantBuffers(1, 1, &shadowParamsCB);
-        }
+        BindPhongCB(worldMatrix);
+        BindShadow();
 
         ctx->PSSetShaderResources(3, 1, &srv_);
         ctx->PSSetSamplers(1, 1, &sampler_);

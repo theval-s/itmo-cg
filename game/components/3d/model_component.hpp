@@ -10,7 +10,7 @@
 namespace val_cg {
     // Loads a mesh from an FBX/OBJ file via Assimp. Supports bounding-sphere
     // collision and an "absorbed" flag used by the Katamari player.
-    class ModelComponent : public MeshComponent {
+    class ModelComponent : virtual public MeshComponent {
     public:
         ModelComponent(Game* game, const std::string& filePath,
                        DirectX::SimpleMath::Vector3 position,

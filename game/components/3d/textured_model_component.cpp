@@ -17,7 +17,8 @@ namespace val_cg {
                                                    const std::wstring& texturePath,
                                                    Vector3 position,
                                                    float scale)
-        : ModelComponent(game, modelPath, position, scale, {1.f, 1.f, 1.f, 1.f})
+        : MeshComponent(game)
+        , ModelComponent(game, modelPath, position, scale, {1.f, 1.f, 1.f, 1.f})
         , texturePath(texturePath)
     {}
 
