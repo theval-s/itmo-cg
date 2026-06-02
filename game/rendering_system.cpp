@@ -255,9 +255,9 @@ namespace val_cg {
             if (ld.type == LightDirectional && shadowManager) {
                 const auto* vps    = shadowManager->GetLightVPs();
                 const auto* splits = shadowManager->GetCascadeSplits();
-                cb.lightViewProj0  = vps[0];
-                cb.lightViewProj1  = vps[1];
-                cb.lightViewProj2  = vps[2];
+                cb.lightViewProj0  = vps[0].Transpose();
+                cb.lightViewProj1  = vps[1].Transpose();
+                cb.lightViewProj2  = vps[2].Transpose();
                 cb.cascadeSplits   = {splits[0], splits[1], splits[2], 0.f};
                 cb.shadowsEnabled  = 1;
                 shadowManager->BindShadowSRVsDeferred(ctx, 3);  // t3-t5
