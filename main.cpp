@@ -62,7 +62,7 @@ void GenerateKatamari(val_cg::Game* game) {
         30.f, 30.f, 5.f);
     game->Components.push_back(terrain);
 
-    auto* sun = new val_cg::DirectionalLightComponent(game, {0,1.f,0}, {1.f,0.9f,0.8f});
+    auto* sun = new val_cg::DirectionalLightComponent(game, {1,1.f,0}, {1.f,0.9f,0.8f});
     game->AddLight(sun);
     game->SetShadowManager(new val_cg::ShadowMapComponent(game, sun));
 

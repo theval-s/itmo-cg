@@ -134,7 +134,7 @@ namespace val_cg {
     }
 
     void ShadowMapComponent::ComputeCascadeSplits() {
-        constexpr float camNear  = 0.001f;
+        constexpr float camNear  = 0.1f;   // practical log-formula near; camera clip near is irrelevant here
         constexpr float camFar   = SHADOW_FAR;
         constexpr float lambda   = 0.75f;
 
@@ -189,9 +189,8 @@ namespace val_cg {
         //     std::cerr << "\n";
         // }
 
-        // worldCorners span the full camera frustum [camNear, camFar=100].
-        // Fracs must be relative to that range, not SHADOW_FAR.
-        constexpr float CAM_FAR = 100.f;
+        // worldCorners span the full camera frustum; fracs must be relative to SHADOW_FAR.
+        constexpr float CAM_FAR = SHADOW_FAR;
         float prevSplit = 0.001f;
         for (int c = 0; c < NUM_CASCADES; ++c) {
             float nearFrac = prevSplit        / CAM_FAR;
@@ -228,6 +227,13 @@ namespace val_cg {
             // CreateOrthographicOffCenter is RH: near/far must be positive distances
             // (maps z=-near → NDC 0, z=-far → NDC 1). minZ/maxZ are negative RH Z values,
             // so negate them: -maxZ is the closest distance, -minZ is the farthest.
+
+            //this is the code that teacher lists in their presentation for LVPM matrix,
+            //constexpr float zMult = 10.0f;
+            //minZ = (minZ < 0) ? minZ * zMult : minZ / zMult;
+            //maxZ = (maxZ < 0) ? maxZ * zMult : maxZ * zMult;
+            //auto lightProj = Matrix::CreateOrthographicOffCenter(minX, maxX, minY, maxY, minZ, maxZ);
+
             Matrix lightProj = Matrix::CreateOrthographicOffCenter(
                 minX, maxX, minY, maxY, -maxZ - zSlack, -minZ + zSlack);
 
