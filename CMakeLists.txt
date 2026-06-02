@@ -30,6 +30,9 @@ add_executable(itmo_cg main.cpp
         game/components/3d/lights/moving_point_light_component.cpp
         game/components/3d/light_shooter_component.cpp
         game/components/3d/lit_mesh_component.cpp
+        game/components/3d/gbuffer.cpp
+        game/components/3d/lights/spot_light_component.cpp
+        game/rendering_system.cpp
 )
 
 target_include_directories(itmo_cg PRIVATE external game)

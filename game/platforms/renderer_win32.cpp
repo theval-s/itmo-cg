@@ -70,34 +70,44 @@ RendererWin32::RendererWin32(int screenWidth, int screenHeight)
 
     deviceContext->OMSetDepthStencilState(DSState, 1);
 
-     ID3D11Texture2D* depthStencil;
-     D3D11_TEXTURE2D_DESC descDepth;
+     D3D11_TEXTURE2D_DESC descDepth = {};
      descDepth.Width = screenWidth;
      descDepth.Height = screenHeight;
      descDepth.MipLevels = 1;
      descDepth.ArraySize = 1;
-     descDepth.Format = DXGI_FORMAT_D32_FLOAT;
+     descDepth.Format = DXGI_FORMAT_R32_TYPELESS;  // allows both DSV and SRV views
      descDepth.SampleDesc.Count = 1;
      descDepth.SampleDesc.Quality = 0;
      descDepth.Usage = D3D11_USAGE_DEFAULT;
-     descDepth.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+     descDepth.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
      descDepth.CPUAccessFlags = 0;
      descDepth.MiscFlags = 0;
-     res = device->CreateTexture2D(&descDepth, nullptr, &depthStencil);
+     res = device->CreateTexture2D(&descDepth, nullptr, &depthTexture);
      if (FAILED(res)) {
-         std::cout << "failed to create texture " << res << std::endl;
-         throw std::runtime_error("Failed to create device.");
+         std::cout << "failed to create depth texture " << res << std::endl;
+         throw std::runtime_error("Failed to create depth texture.");
      }
 
-     D3D11_DEPTH_STENCIL_VIEW_DESC descDSV;
+     D3D11_DEPTH_STENCIL_VIEW_DESC descDSV = {};
      descDSV.Format = DXGI_FORMAT_D32_FLOAT;
      descDSV.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
      descDSV.Texture2D.MipSlice = 0;
      descDSV.Flags = 0;
-     res = device->CreateDepthStencilView(depthStencil, &descDSV, &depthStencilView);
+     res = device->CreateDepthStencilView(depthTexture, &descDSV, &depthStencilView);
      if (FAILED(res)) {
          std::cout << "failed to create dsv" << std::endl;
          throw std::runtime_error("Failed to create device.");
+     }
+
+     D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+     srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
+     srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+     srvDesc.Texture2D.MipLevels = 1;
+     srvDesc.Texture2D.MostDetailedMip = 0;
+     res = device->CreateShaderResourceView(depthTexture, &srvDesc, &depthSRV);
+     if (FAILED(res)) {
+         std::cout << "failed to create depth srv" << std::endl;
+         throw std::runtime_error("Failed to create depth SRV.");
      }
 }
 

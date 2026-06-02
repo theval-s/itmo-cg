@@ -14,6 +14,7 @@
 
 namespace val_cg {
     class ShadowMapComponent;  // forward declaration
+    class RenderingSystem;     // forward declaration
 
     class GAMEFRAMEWORK_API Game {
     public:
@@ -58,6 +59,8 @@ namespace val_cg {
         void SetShadowManager(ShadowMapComponent* sm) { shadowManager = sm; }
         ShadowMapComponent* GetShadowManager() const  { return shadowManager; }
 
+        RenderingSystem* GetRenderingSystem() const { return renderingSystem; }
+
         InputDevice* InputHandler() const;
 
     private:
@@ -75,5 +78,6 @@ namespace val_cg {
         std::vector<LightComponent*> lightSources;
         mutable std::vector<LightComponent*> pendingLights;
         ShadowMapComponent* shadowManager = nullptr;
+        RenderingSystem*    renderingSystem = nullptr;
     };
 } // val_cg

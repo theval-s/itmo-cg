@@ -19,6 +19,9 @@ namespace val_cg {
         virtual void Reload(){};
         virtual void Update(float deltaTime){};
         virtual void DestroyResources(){};
+        // Returns true for components handled by RenderingSystem (deferred path).
+        // Game::Draw() skips forward-rendering these when a RenderingSystem is active.
+        virtual bool IsDeferred() const { return false; }
     };
 
 }

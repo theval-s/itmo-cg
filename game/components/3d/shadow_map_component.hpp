@@ -26,8 +26,15 @@ namespace val_cg {
 
         void DrawDebugShadowMaps();
 
-        // Bind shadow resources to PS slots (b1, t0-t2, s0).
+        // Bind shadow resources to PS slots (b1, t0-t2, s0). Used by forward path.
         void BindForDraw(ID3D11DeviceContext* ctx) const;
+
+        // Getters for deferred lighting pass.
+        const DirectX::SimpleMath::Matrix* GetLightVPs() const { return lightVP; }
+        const float* GetCascadeSplits() const { return cascadeSplits; }
+        ID3D11SamplerState* GetShadowSampler() const { return shadowSampler; }
+        // Bind shadow map SRVs starting at the given PS slot (3 consecutive slots).
+        void BindShadowSRVsDeferred(ID3D11DeviceContext* ctx, int startSlot = 3) const;
 
     private:
         void ComputeCascadeSplits();

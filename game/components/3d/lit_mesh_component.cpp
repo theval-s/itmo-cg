@@ -58,6 +58,28 @@ namespace val_cg {
         }
     }
 
+    void LitMeshComponent::DrawDeferred(ID3D11DeviceContext* ctx, ID3D11Buffer* gbCB) {
+        const auto camData = game->GetCameraData();
+        GBufferCBData cb = {};
+        cb.worldViewProj = (worldMatrix * camData.viewMatrix * camData.projMatrix).Transpose();
+        cb.world         = worldMatrix.Transpose();
+        cb.matDiffuse    = cbData.matDiffuse;
+        cb.matSpecular   = cbData.matSpecular;
+
+        D3D11_MAPPED_SUBRESOURCE mapped = {};
+        ctx->Map(gbCB, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+        memcpy(mapped.pData, &cb, sizeof(GBufferCBData));
+        ctx->Unmap(gbCB, 0);
+        ctx->VSSetConstantBuffers(0, 1, &gbCB);
+        ctx->PSSetConstantBuffers(0, 1, &gbCB);
+
+        constexpr UINT stride = sizeof(PhongVertex), offset = 0;
+        ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        ctx->IASetVertexBuffers(0, 1, &vb, &stride, &offset);
+        ctx->IASetIndexBuffer(ib, DXGI_FORMAT_R32_UINT, 0);
+        ctx->DrawIndexed(static_cast<UINT>(indices.size()), 0, 0);
+    }
+
     void LitMeshComponent::DrawDepth() {
         auto* ctx = game->renderer.deviceContext;
         ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);

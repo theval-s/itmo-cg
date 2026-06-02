@@ -150,6 +150,32 @@ namespace val_cg {
 
     void TerrainComponent::Update(float dt) { MeshComponent::Update(dt); }
 
+    void TerrainComponent::DrawDeferred(ID3D11DeviceContext* ctx, ID3D11Buffer* gbCB) {
+        GBufferCBData cb = {};
+        const auto camData = game->GetCameraData();
+        cb.worldViewProj = (worldMatrix * camData.viewMatrix * camData.projMatrix).Transpose();
+        cb.world         = worldMatrix.Transpose();
+        cb.matDiffuse    = {1.f, 1.f, 1.f, 1.f};   // texture provides color
+        cb.matSpecular   = {0.3f, 0.3f, 0.3f, 8.f};
+
+        D3D11_MAPPED_SUBRESOURCE mapped = {};
+        ctx->Map(gbCB, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+        memcpy(mapped.pData, &cb, sizeof(GBufferCBData));
+        ctx->Unmap(gbCB, 0);
+        ctx->VSSetConstantBuffers(0, 1, &gbCB);
+        ctx->PSSetConstantBuffers(0, 1, &gbCB);
+
+        // Bind diffuse texture and sampler at slots expected by GBufferTerrainShader.
+        ctx->PSSetShaderResources(0, 1, &srv_);
+        ctx->PSSetSamplers(0, 1, &sampler_);
+
+        const UINT stride = 32, offset = 0;
+        ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        ctx->IASetVertexBuffers(0, 1, &vb, &stride, &offset);
+        ctx->IASetIndexBuffer(ib, DXGI_FORMAT_R32_UINT, 0);
+        ctx->DrawIndexed(static_cast<UINT>(indices.size()), 0, 0);
+    }
+
     float TerrainComponent::GetHeightAt(float wx, float wz) const {
         float u = std::clamp((wx + width_  * 0.5f) / width_,  0.f, 1.f);
         float v = std::clamp((wz + depth_  * 0.5f) / depth_,  0.f, 1.f);
@@ -414,6 +440,33 @@ namespace val_cg {
         ctx->PSSetShaderResources(3, 1, &srv_);
         ctx->PSSetSamplers(1, 1, &sampler_);
 
+        ctx->DrawIndexed(static_cast<UINT>(indices.size()), 0, 0);
+    }
+
+    void KatamariPlayerComponent::DrawDeferred(ID3D11DeviceContext* ctx, ID3D11Buffer* gbCB) {
+        // Upload GBufferCBData (transform + materials).
+        const auto camData = game->GetCameraData();
+        GBufferCBData cb = {};
+        cb.worldViewProj = (worldMatrix * camData.viewMatrix * camData.projMatrix).Transpose();
+        cb.world         = worldMatrix.Transpose();
+        cb.matDiffuse    = cbData.matDiffuse;
+        cb.matSpecular   = cbData.matSpecular;
+
+        D3D11_MAPPED_SUBRESOURCE mapped = {};
+        ctx->Map(gbCB, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+        memcpy(mapped.pData, &cb, sizeof(GBufferCBData));
+        ctx->Unmap(gbCB, 0);
+        ctx->VSSetConstantBuffers(0, 1, &gbCB);
+        ctx->PSSetConstantBuffers(0, 1, &gbCB);
+
+        // Bind cobblestone texture at t0 (GBufferTexturedShader reads t0/s0).
+        ctx->PSSetShaderResources(0, 1, &srv_);
+        ctx->PSSetSamplers(0, 1, &sampler_);
+
+        constexpr UINT stride = sizeof(PhongVertex), offset = 0;
+        ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        ctx->IASetVertexBuffers(0, 1, &vb, &stride, &offset);
+        ctx->IASetIndexBuffer(ib, DXGI_FORMAT_R32_UINT, 0);
         ctx->DrawIndexed(static_cast<UINT>(indices.size()), 0, 0);
     }
 

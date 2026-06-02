@@ -4,12 +4,14 @@
 
 #include "game.hpp"
 #include "components/3d/shadow_map_component.hpp"
+#include "rendering_system.hpp"
 #include <iostream>
 
 namespace val_cg {
     Game::Game(LPCWSTR applicationName, int clientWidth, int clientHeight)
         : renderer(clientWidth, clientHeight)
     {
+        renderingSystem = new RenderingSystem(this);
         CreateCamera();
         inputDevice = new InputDevice(this);
         DisplayWin32::mInputDevice = inputDevice;
@@ -20,6 +22,7 @@ namespace val_cg {
         delete inputDevice;
         delete camera;
         delete shadowManager;
+        if (renderingSystem) { renderingSystem->DestroyResources(); delete renderingSystem; }
     }
 
     void Game::DestroyResources() {
@@ -30,17 +33,30 @@ namespace val_cg {
     }
 
     void Game::Draw() {
-        // Shadow depth pass (renders to shadow maps before the main color pass)
-        if (shadowManager) {
-            shadowManager->RenderShadowMaps();
-        }
+        // 1. Shadow depth pass (unchanged)
+        if (shadowManager) shadowManager->RenderShadowMaps();
 
-        renderer.deviceContext->OMSetRenderTargets(1, &renderer.renderTargetView, renderer.depthStencilView);
-        const float color[] = { 0.f, 0.f, 0.f, 1.0f };
-        renderer.deviceContext->ClearRenderTargetView(renderer.renderTargetView, color);
+        // 2. Clear depth buffer
         renderer.deviceContext->ClearDepthStencilView(renderer.depthStencilView, D3D11_CLEAR_DEPTH, 1.f, 0.f);
 
+        if (renderingSystem) {
+            // 3. Deferred geometry pass: fills G-buffer + depth
+            renderingSystem->GeometryPass();
+
+            // 4. Clear backbuffer then deferred lighting pass
+            const float black[] = {0.f, 0.f, 0.f, 1.f};
+            renderer.deviceContext->ClearRenderTargetView(renderer.renderTargetView, black);
+            renderingSystem->LightingPass();
+        }
+
+        // 5. Forward pass: restore targets, draw non-deferred components
+        renderer.deviceContext->OMSetRenderTargets(1, &renderer.renderTargetView, renderer.depthStencilView);
+        if (!renderingSystem) {
+            const float color[] = {0.f, 0.f, 0.f, 1.f};
+            renderer.deviceContext->ClearRenderTargetView(renderer.renderTargetView, color);
+        }
         for (auto& comp : Components) {
+            if (renderingSystem && comp->IsDeferred()) continue;
             comp->Draw();
         }
 
@@ -118,6 +134,10 @@ namespace val_cg {
         if (camera) camera->Initialize();
         for (auto& comp : Components) {
             comp->Initialize();
+        }
+        if (renderingSystem) {
+            renderingSystem->Initialize();
+            renderingSystem->SetShadowManager(shadowManager);
         }
     }
 

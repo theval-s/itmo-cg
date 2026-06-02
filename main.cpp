@@ -11,6 +11,7 @@
 #include "components/3d/lights/directional_light_component.hpp"
 #include "components/3d/light_shooter_component.hpp"
 #include "components/3d/shadow_map_component.hpp"
+#include "components/3d/lights/spot_light_component.hpp"
 #include "game/game.hpp"
 #include "game/components/paddle_component.hpp"
 #include <random>
@@ -88,6 +89,16 @@ void GenerateKatamari(val_cg::Game* game) {
     game->GetCamera()->SetOrbitTarget(&player->GetPosition(), &player->GetRadius(), 8.f);
 
     game->Components.push_back(new val_cg::LightShooterComponent(game));
+
+    // Spot light pointing straight down over the starting area
+    game->AddLight(new val_cg::SpotLightComponent(
+        game,
+        DirectX::SimpleMath::Vector3{0.f, 6.f, 0.f},  // position: above centre
+        DirectX::SimpleMath::Vector3{0.f, -1.f, 0.f}, // direction: straight down
+        15.f,   // inner cone half-angle (degrees)
+        35.f,   // outer cone half-angle (degrees)
+        {0.9f, 0.8f, 1.0f}  // cool white
+    ));
 }
 
 int main() {

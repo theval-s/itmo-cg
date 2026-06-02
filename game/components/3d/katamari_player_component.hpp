@@ -23,6 +23,10 @@ namespace val_cg {
         void Initialize() override;
         void Draw() override;
         void Update(float deltaTime) override;
+        bool IsDeferred() const override { return true; }
+
+        // Called by RenderingSystem geometry pass (terrain G-buffer shaders bound externally).
+        void DrawDeferred(ID3D11DeviceContext* ctx, ID3D11Buffer* gbufferCB);
 
         // Returns world-space Y of terrain surface at (wx, wz)
         float GetHeightAt(float wx, float wz) const;
@@ -49,6 +53,8 @@ namespace val_cg {
         void Initialize() override;
         void Update(float deltaTime) override;
         void Draw() override;
+        bool IsTextured() const override { return true; }
+        void DrawDeferred(ID3D11DeviceContext* ctx, ID3D11Buffer* gbufferCB) override;
         const DirectX::SimpleMath::Vector3& GetPosition() const { return position; }
         const float& GetRadius() const { return radius; }
         void SetTerrain(TerrainComponent* t) { terrain_ = t; }

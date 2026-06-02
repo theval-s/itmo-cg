@@ -14,6 +14,15 @@ class LitMeshComponent : virtual public MeshComponent {
         // Assumes the shadow VS, input layout, and depth CB are already bound.
         virtual void DrawDepth();
 
+        // Called by RenderingSystem during the geometry pass.
+        // Assumes the G-buffer shader and input layout are already bound.
+        virtual void DrawDeferred(ID3D11DeviceContext* ctx, ID3D11Buffer* gbufferCB);
+
+        // Returns true for components that also bind a texture in DrawDeferred().
+        virtual bool IsTextured() const { return false; }
+
+        bool IsDeferred() const override { return true; }
+
     protected:
         // Creates phongCB and shadowParamsCB. Call once from Initialize().
         void InitLitBuffers();

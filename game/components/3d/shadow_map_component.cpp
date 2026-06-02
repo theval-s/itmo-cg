@@ -338,6 +338,11 @@ namespace val_cg {
         ctx->PSSetSamplers(0, 1, &shadowSampler);
     }
 
+    void ShadowMapComponent::BindShadowSRVsDeferred(ID3D11DeviceContext* ctx, int startSlot) const {
+        ID3D11ShaderResourceView* srvs[3] = {shadowSRVs[0], shadowSRVs[1], shadowSRVs[2]};
+        ctx->PSSetShaderResources(startSlot, 3, srvs);
+    }
+
     void ShadowMapComponent::DestroyResources() {
         for (int i = 0; i < NUM_CASCADES; ++i) {
             if (shadowSRVs[i])     { shadowSRVs[i]->Release();     shadowSRVs[i]     = nullptr; }

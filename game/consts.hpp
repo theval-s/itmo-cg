@@ -18,4 +18,9 @@ namespace val_cg {
     constexpr wchar_t SHADOW_DEPTH_SHADER_PATH[]    =L"./shaders/ShadowDepth.hlsl";
     constexpr wchar_t DEBUG_SHADER_PATH[]           =L"./shaders/DebugQuad.hlsl";
 
+    // Deferred rendering shaders
+    constexpr wchar_t GBUFFER_SHADER_PATH[]          = L"./shaders/GBufferShader.hlsl";
+    constexpr wchar_t GBUFFER_TEXTURED_SHADER_PATH[] = L"./shaders/GBufferTexturedShader.hlsl";
+    constexpr wchar_t GBUFFER_TERRAIN_SHADER_PATH[]  = L"./shaders/GBufferTerrainShader.hlsl";
+    constexpr wchar_t LIGHTING_SHADER_PATH[]         = L"./shaders/LightingShader.hlsl";
 }

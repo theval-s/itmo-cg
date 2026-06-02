@@ -21,7 +21,7 @@ namespace val_cg {
     };
 
   //light type
-    enum LightType : int { LightDirectional = 0, LightPoint = 1 };
+    enum LightType : int { LightDirectional = 0, LightPoint = 1, LightSpot = 2, LightAmbient = 3 };
 
     struct LightData {
         DirectX::XMFLOAT4 dirOrPos;   // directional: toward-light dir; point: world position
@@ -45,6 +45,39 @@ namespace val_cg {
         DirectX::XMFLOAT4 matDiffuse;              // 16
         DirectX::XMFLOAT4 matSpecular;             // 16
     };
+
+    // ---- Deferred rendering constant buffers ----
+
+    struct GBufferCBData {            // b0 in geometry pass
+        DirectX::SimpleMath::Matrix worldViewProj;  // 64
+        DirectX::SimpleMath::Matrix world;           // 64
+        DirectX::XMFLOAT4 matDiffuse;               // 16
+        DirectX::XMFLOAT4 matSpecular;              // 16  w = shininess
+    };  // 160 bytes
+
+    struct LightingCBData {           // b0 in lighting pass
+        DirectX::SimpleMath::Matrix invViewProj;    // 64  = (view*proj).Invert().Transpose()
+        DirectX::SimpleMath::Matrix view;           // 64  for cascade-split view-Z
+        DirectX::XMFLOAT4 cameraPos;                // 16
+        DirectX::XMFLOAT4 screenSize;               // 16  xy = width, height
+        DirectX::XMFLOAT4 ambient;                  // 16  used for ambient pass
+        DirectX::XMFLOAT4 lightDirOrPos;            // 16  direction (dir) or position (point/spot)
+        DirectX::XMFLOAT4 lightColor;               // 16
+        int   lightType;                             //  4  0=dir,1=point,2=spot,3=ambient
+        float attenConst;                            //  4
+        float attenLinear;                           //  4
+        float attenQuad;                             //  4
+        DirectX::XMFLOAT4 spotDirection;            // 16  xyz = cone axis, w = cos(inner)
+        float spotOuterCos;                          //  4
+        float _lpad[3];                              // 12
+        // CSM shadow data (directional light only)
+        DirectX::SimpleMath::Matrix lightViewProj0; // 64
+        DirectX::SimpleMath::Matrix lightViewProj1; // 64
+        DirectX::SimpleMath::Matrix lightViewProj2; // 64
+        DirectX::XMFLOAT4 cascadeSplits;            // 16
+        int   shadowsEnabled;                        //  4
+        float _spad[3];                              // 12
+    };  // 464 bytes
 
     static constexpr int CSM_NUM_CASCADES = 3;
 
