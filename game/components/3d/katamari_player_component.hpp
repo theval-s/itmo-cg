@@ -4,6 +4,7 @@
 
 #pragma once
 #include "mesh_component.hpp"
+#include "common_structs.h"
 #include <DirectXCollision.h>
 #include <string>
 #include <vector>
@@ -44,7 +45,7 @@ namespace val_cg {
     // ball that acts as a player
     class KatamariPlayerComponent : public MeshComponent {
     public:
-        explicit KatamariPlayerComponent(Game* game, std::wstring pathToTexture);
+        explicit KatamariPlayerComponent(Game* game);
 
         void Initialize() override;
         void Update(float deltaTime) override;
@@ -63,9 +64,9 @@ namespace val_cg {
 
         void CheckCollision();
 
-        std::wstring texturePath;
-        ID3D11ShaderResourceView* srv = nullptr;
-        ID3D11SamplerState* sampler   = nullptr;
-        int vertexCount = 0;
+        PhongCBData cbData{};
+        ID3D11Buffer* phongCB = nullptr;
+        ShadowCBData shadowCBData{};
+        ID3D11Buffer* shadowParamsCB = nullptr;
     };
 }

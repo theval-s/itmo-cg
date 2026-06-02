@@ -82,7 +82,7 @@ void GenerateKatamari(val_cg::Game* game) {
         }
     }
 
-    auto* player = new val_cg::KatamariPlayerComponent(game, L"./models/owl.jpg");
+    auto* player = new val_cg::KatamariPlayerComponent(game);
     player->SetTerrain(terrain);
     game->Components.push_back(player);
     game->GetCamera()->SetOrbitTarget(&player->GetPosition(), &player->GetRadius(), 8.f);
