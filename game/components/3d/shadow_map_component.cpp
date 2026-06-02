@@ -63,6 +63,27 @@ namespace val_cg {
         device->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(),
                                    nullptr, &shadowVS);
 
+        //creating debug shaders
+        hr = D3DCompileFromFile(DEBUG_SHADER_PATH, nullptr, nullptr,
+            "VSMain", "vs_5_0",
+            D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0, &vsBlob, &errBlob);
+        if (FAILED(hr)) {
+            if (errBlob) { std::cerr << (char*)errBlob->GetBufferPointer(); errBlob->Release(); }
+            else throw std::runtime_error("DebugQuad.hlsl not found");
+        }
+        device->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(),
+                                   nullptr, &debugVS);
+
+        hr = D3DCompileFromFile(DEBUG_SHADER_PATH, nullptr, nullptr,
+            "PSMain", "ps_5_0",
+            D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0, &vsBlob, &errBlob);
+        if (FAILED(hr)) {
+            if (errBlob) { std::cerr << (char*)errBlob->GetBufferPointer(); errBlob->Release(); }
+            else throw std::runtime_error("DebugQuad.hlsl not found");
+        }
+        device->CreatePixelShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(),
+                                   nullptr, &debugPS);
+
         D3D11_INPUT_ELEMENT_DESC posElem = {
             "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0,
             D3D11_INPUT_PER_VERTEX_DATA, 0
@@ -270,6 +291,38 @@ namespace val_cg {
         ctx->Unmap(shadowParamsCB, 0);
 
         ctx->OMSetDepthStencilState(nullptr, 0);
+    }
+
+    void ShadowMapComponent::DrawDebugShadowMaps() {
+        auto context = game->renderer.deviceContext;
+
+        context->VSSetShader(debugVS, nullptr, 0);
+        context->PSSetShader(debugPS, nullptr, 0);
+
+        context->IASetInputLayout(nullptr);
+        context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+        // context->OMSetRenderTargets(1, &game->renderer.renderTargetView, nullptr);
+        for (int cascade = 0; cascade < NUM_CASCADES; ++cascade)
+        {
+            D3D11_VIEWPORT vp{};
+
+            vp.Width  = 256;
+            vp.Height = 256;
+
+            vp.TopLeftX = game->renderer.ScreenWidth - 256;
+            vp.TopLeftY = cascade * (256 + 10) ;
+
+            vp.MinDepth = 0.0f;
+            vp.MaxDepth = 1.0f;
+
+            context->RSSetViewports(1, &vp);
+
+            context->PSSetShaderResources(0, 1,
+                &shadowSRVs[cascade]);
+
+            context->Draw(6, 0);
+        }
     }
 
     void ShadowMapComponent::BindForDraw(ID3D11DeviceContext* ctx) const {

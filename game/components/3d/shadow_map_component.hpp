@@ -24,6 +24,8 @@ namespace val_cg {
         // Called by Game::Draw() before the main color pass.
         void RenderShadowMaps();
 
+        void DrawDebugShadowMaps();
+
         // Bind shadow resources to PS slots (b1, t0-t2, s0).
         void BindForDraw(ID3D11DeviceContext* ctx) const;
 
@@ -51,5 +53,8 @@ namespace val_cg {
         // Shadow params CB sent to PhongShader (b1)
         ID3D11Buffer*             shadowParamsCB  = nullptr;
         ID3D11SamplerState*       shadowSampler   = nullptr;
+
+        ID3D11VertexShader* debugVS = nullptr;
+        ID3D11PixelShader* debugPS = nullptr;
     };
 }

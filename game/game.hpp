@@ -44,6 +44,7 @@ namespace val_cg {
         CameraData GetCameraData() const { return camera->GetCameraData();}
         CameraComponent* GetCamera() const { return camera; }
         bool IsCameraCreated() const { return isCameraCreated; }
+        bool IsDebugDrawEnabled() const { return debugDraw; }
 
         void AddLight(LightComponent* l) {
             Components.push_back(l);
@@ -67,6 +68,7 @@ namespace val_cg {
         bool isExitRequested = false;
         int score = 0;
         bool isCameraCreated = false;
+        bool debugDraw = false;
 
         CameraComponent* camera = nullptr;
         InputDevice* inputDevice = nullptr;

@@ -43,6 +43,10 @@ namespace val_cg {
         for (auto& comp : Components) {
             comp->Draw();
         }
+
+        if (debugDraw && shadowManager) {
+            shadowManager->DrawDebugShadowMaps();
+        }
     }
 
     void Game::Exit() {
@@ -76,6 +80,7 @@ namespace val_cg {
                 SetWindowTextW(renderer.display.GetWindowHandle(), text);
                 fc = 0;
             }
+            UpdateInternal();
             Update(deltaTime);
             FlushPendingLights();
             Draw();
@@ -142,6 +147,9 @@ namespace val_cg {
     }
 
     void Game::UpdateInternal() {
-        //todo???
+        if (inputDevice->IsKeyDown(Keys::RightButton)) {
+            debugDraw = !debugDraw;
+            std::cout << "Debug Draw: " << debugDraw << std::endl;
+        }
     }
 } // val_cg
