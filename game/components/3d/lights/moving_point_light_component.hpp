@@ -1,8 +1,8 @@
 #pragma once
 #include "light_component.hpp"
 #include "SimpleMath.h"
-#include <GeometricPrimitive.h>
-#include <memory>
+#include "common_structs.h"
+#include "rhi/graphics_device.hpp"
 
 namespace val_cg {
     class MovingPointLightComponent : public LightComponent {
@@ -23,7 +23,14 @@ namespace val_cg {
         [[nodiscard]] LightData GetLightData() const override;
 
     private:
-        std::unique_ptr<DirectX::GeometricPrimitive> debugSphere;
+        // Debug viz: a line-list wire sphere rendered through the RHI (backend-agnostic).
+        rhi::GpuPipeline* pipeline = nullptr;
+        rhi::GpuBuffer*   vb       = nullptr;
+        rhi::GpuBuffer*   ib       = nullptr;
+        rhi::GpuBuffer*   cb       = nullptr;
+        int               indexCount = 0;
+        WorldViewProjData data{};
+
         DirectX::SimpleMath::Vector3 position;
         DirectX::SimpleMath::Vector3 direction;
         float speed;

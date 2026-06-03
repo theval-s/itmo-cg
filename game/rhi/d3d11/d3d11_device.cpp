@@ -10,12 +10,6 @@
 
 namespace val_cg::rhi::d3d11 {
 
-    // ---- Factory (the one backend-selection seam) ----
-    std::unique_ptr<GraphicsDevice> CreateGraphicsDevice(void* nativeWindowHandle,
-                                                         int width, int height) {
-        return std::make_unique<D3D11Device>(static_cast<HWND>(nativeWindowHandle), width, height);
-    }
-
     D3D11Device::D3D11Device(HWND window, int width, int height)
         : width(width), height(height) {
         CreateSwapchainAndBackbuffer(window);
@@ -292,4 +286,14 @@ namespace val_cg::rhi::d3d11 {
         swapChain->Present(1, 0);
     }
 
+}
+
+// The backend-selection seam. Declared in graphics_device.hpp as val_cg::rhi::
+// CreateGraphicsDevice — must be defined in that namespace (not rhi::d3d11).
+namespace val_cg::rhi {
+    std::unique_ptr<GraphicsDevice> CreateGraphicsDevice(void* nativeWindowHandle,
+                                                         int width, int height) {
+        return std::make_unique<d3d11::D3D11Device>(
+            static_cast<HWND>(nativeWindowHandle), width, height);
+    }
 }
