@@ -33,6 +33,9 @@ add_executable(itmo_cg main.cpp
         game/components/3d/gbuffer.cpp
         game/components/3d/lights/spot_light_component.cpp
         game/rendering_system.cpp
+        game/rhi/d3d11/d3d11_device.cpp
+        game/rhi/d3d11/d3d11_command_list.cpp
+        game/rhi/d3d11/d3d11_state_cache.cpp
 )
 
 target_include_directories(itmo_cg PRIVATE external game)
