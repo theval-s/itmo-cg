@@ -6,6 +6,7 @@
 #include "../camera_component.hpp"
 #include "game_component.hpp"
 #include "../triangle_component.hpp"
+#include "rhi/graphics_device.hpp"
 
 namespace val_cg {
     class MeshComponent : public TriangleComponent {
@@ -18,9 +19,9 @@ namespace val_cg {
         DirectX::SimpleMath::Matrix GetWorldMatrix() const { return worldMatrix; }
 
     protected:
-        ID3D11Buffer* constantBuffer = nullptr;
+        rhi::GpuBuffer* constantBuffer = nullptr;
         WorldViewProjData data{};
         DirectX::SimpleMath::Matrix worldMatrix{};
-        D3D_PRIMITIVE_TOPOLOGY topology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+        rhi::PrimitiveTopology topology = rhi::PrimitiveTopology::TriangleList;
     };
 }

@@ -9,15 +9,9 @@ namespace val_cg {
     LitMeshComponent::LitMeshComponent(Game* game) : MeshComponent(game) {}
 
     void LitMeshComponent::InitLitBuffers() {
-        auto* dev = game->renderer.device.Get();
-        D3D11_BUFFER_DESC cbDesc = {};
-        cbDesc.Usage          = D3D11_USAGE_DYNAMIC;
-        cbDesc.BindFlags      = D3D11_BIND_CONSTANT_BUFFER;
-        cbDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-        cbDesc.ByteWidth      = sizeof(PhongCBData);
-        dev->CreateBuffer(&cbDesc, nullptr, &phongCB);
-        cbDesc.ByteWidth = sizeof(ShadowCBData);
-        dev->CreateBuffer(&cbDesc, nullptr, &shadowParamsCB);
+        auto* dev = game->GetDevice();
+        phongCB        = dev->CreateBuffer({rhi::BufferType::Constant, sizeof(PhongCBData),  /*dynamic*/true});
+        shadowParamsCB = dev->CreateBuffer({rhi::BufferType::Constant, sizeof(ShadowCBData), /*dynamic*/true});
     }
 
     void LitMeshComponent::BindPhongCB(const Matrix& worldMat) {
@@ -34,31 +28,24 @@ namespace val_cg {
                 cbData.lights[lcount++] = lights[i]->GetLightData();
         cbData.lightCount = lcount;
 
-        auto* ctx = game->renderer.deviceContext;
-        D3D11_MAPPED_SUBRESOURCE mapped = {};
-        ctx->Map(phongCB, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
-        memcpy(mapped.pData, &cbData, sizeof(PhongCBData));
-        ctx->Unmap(phongCB, 0);
-        ctx->VSSetConstantBuffers(0, 1, &phongCB);
-        ctx->PSSetConstantBuffers(0, 1, &phongCB);
+        phongCB->Update(&cbData, sizeof(PhongCBData));
+        auto* cmd = game->GetCommandList();
+        cmd->SetConstantBuffer(rhi::ShaderStage::Vertex, 0, phongCB);
+        cmd->SetConstantBuffer(rhi::ShaderStage::Pixel,  0, phongCB);
     }
 
     void LitMeshComponent::BindShadow() {
         auto* shadowMgr = game->GetShadowManager();
         if (shadowMgr) {
-            shadowMgr->BindForDraw(game->renderer.deviceContext);
+            shadowMgr->BindForDraw(game->GetCommandList());
         } else {
             shadowCBData.shadowsEnabled = 0;
-            auto* ctx = game->renderer.deviceContext;
-            D3D11_MAPPED_SUBRESOURCE smap = {};
-            ctx->Map(shadowParamsCB, 0, D3D11_MAP_WRITE_DISCARD, 0, &smap);
-            memcpy(smap.pData, &shadowCBData, sizeof(ShadowCBData));
-            ctx->Unmap(shadowParamsCB, 0);
-            ctx->PSSetConstantBuffers(1, 1, &shadowParamsCB);
+            shadowParamsCB->Update(&shadowCBData, sizeof(ShadowCBData));
+            game->GetCommandList()->SetConstantBuffer(rhi::ShaderStage::Pixel, 1, shadowParamsCB);
         }
     }
 
-    void LitMeshComponent::DrawDeferred(ID3D11DeviceContext* ctx, ID3D11Buffer* gbCB) {
+    void LitMeshComponent::DrawDeferred(rhi::CommandList* cmd, rhi::GpuBuffer* gbCB) {
         const auto camData = game->GetCameraData();
         GBufferCBData cb = {};
         cb.worldViewProj = (worldMatrix * camData.viewMatrix * camData.projMatrix).Transpose();
@@ -66,27 +53,18 @@ namespace val_cg {
         cb.matDiffuse    = cbData.matDiffuse;
         cb.matSpecular   = cbData.matSpecular;
 
-        D3D11_MAPPED_SUBRESOURCE mapped = {};
-        ctx->Map(gbCB, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
-        memcpy(mapped.pData, &cb, sizeof(GBufferCBData));
-        ctx->Unmap(gbCB, 0);
-        ctx->VSSetConstantBuffers(0, 1, &gbCB);
-        ctx->PSSetConstantBuffers(0, 1, &gbCB);
+        gbCB->Update(&cb, sizeof(GBufferCBData));
+        cmd->SetConstantBuffer(rhi::ShaderStage::Vertex, 0, gbCB);
+        cmd->SetConstantBuffer(rhi::ShaderStage::Pixel,  0, gbCB);
 
-        constexpr UINT stride = sizeof(PhongVertex), offset = 0;
-        ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        ctx->IASetVertexBuffers(0, 1, &vb, &stride, &offset);
-        ctx->IASetIndexBuffer(ib, DXGI_FORMAT_R32_UINT, 0);
-        ctx->DrawIndexed(static_cast<UINT>(indices.size()), 0, 0);
+        cmd->SetVertexBuffer(vb, sizeof(PhongVertex));
+        cmd->SetIndexBuffer(ib, rhi::IndexFormat::Uint32);
+        cmd->DrawIndexed(static_cast<unsigned>(indices.size()));
     }
 
-    void LitMeshComponent::DrawDepth() {
-        auto* ctx = game->renderer.deviceContext;
-        ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        constexpr UINT stride = sizeof(PhongVertex);
-        constexpr UINT offset = 0;
-        ctx->IASetVertexBuffers(0, 1, &vb, &stride, &offset);
-        ctx->IASetIndexBuffer(ib, DXGI_FORMAT_R32_UINT, 0);
-        ctx->DrawIndexed(static_cast<UINT>(indices.size()), 0, 0);
+    void LitMeshComponent::DrawDepth(rhi::CommandList* cmd) {
+        cmd->SetVertexBuffer(vb, sizeof(PhongVertex));
+        cmd->SetIndexBuffer(ib, rhi::IndexFormat::Uint32);
+        cmd->DrawIndexed(static_cast<unsigned>(indices.size()));
     }
 }

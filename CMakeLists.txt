@@ -12,7 +12,6 @@ add_executable(itmo_cg main.cpp
         game/components/ball_component.cpp
         game/components/3d/mesh_component.cpp
         game/platforms/display_win32.cpp
-        game/platforms/renderer_win32.cpp
         external/InputDevice.cpp
         external/Delegates.cpp
         game/components/3d/planet_component.cpp
@@ -30,9 +29,9 @@ add_executable(itmo_cg main.cpp
         game/components/3d/lights/moving_point_light_component.cpp
         game/components/3d/light_shooter_component.cpp
         game/components/3d/lit_mesh_component.cpp
-        game/components/3d/gbuffer.cpp
         game/components/3d/lights/spot_light_component.cpp
-        game/rendering_system.cpp
+        game/rendering/gbuffer.cpp
+        game/rendering/rendering_system.cpp
         game/rhi/d3d11/d3d11_device.cpp
         game/rhi/d3d11/d3d11_command_list.cpp
         game/rhi/d3d11/d3d11_state_cache.cpp

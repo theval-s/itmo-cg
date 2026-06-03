@@ -7,7 +7,7 @@
 
 #include "game_component.hpp"
 #include "InputDevice.h"
-#include "platforms/renderer_win32.hpp"
+#include "platform.hpp"
 #include "components/camera_component.hpp"
 #include "components/3d/lights/light_component.hpp"
 #include "../exports.h"
@@ -25,13 +25,18 @@ namespace val_cg {
         std::string Name;
         std::vector<GameComponent*> Components;
 
-        RendererWin32 renderer; //display, device, swapc, devicecontext, rtv, backbuffer
-    private:
-        //TODO: reconsider win32 parts?
+        Platform platform;   // OS window + graphics device (host layer)
 
     public:
         Game(LPCWSTR applicationName=L"Game", int clientWidth=800, int clientHeight=600);
         ~Game();
+
+        // Host accessors used by every component — forward to the platform layer.
+        rhi::GraphicsDevice* GetDevice()      const { return platform.Device(); }
+        rhi::CommandList*    GetCommandList()  const { return platform.CommandList(); }
+        int GetWidth()  const { return platform.Width(); }
+        int GetHeight() const { return platform.Height(); }
+        HWND GetWindowHandle() const { return platform.WindowHandle(); }
 
         void DestroyResources();
         void Draw();

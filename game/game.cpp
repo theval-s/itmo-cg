@@ -4,12 +4,12 @@
 
 #include "game.hpp"
 #include "components/3d/shadow_map_component.hpp"
-#include "rendering_system.hpp"
+#include "rendering/rendering_system.hpp"
 #include <iostream>
 
 namespace val_cg {
     Game::Game(LPCWSTR applicationName, int clientWidth, int clientHeight)
-        : renderer(clientWidth, clientHeight)
+        : platform("DisplayWindow", clientWidth, clientHeight)
     {
         renderingSystem = new RenderingSystem(this);
         CreateCamera();
@@ -23,6 +23,7 @@ namespace val_cg {
         delete camera;
         delete shadowManager;
         if (renderingSystem) { renderingSystem->DestroyResources(); delete renderingSystem; }
+        // `device` (unique_ptr) frees all GPU resources after the above are gone.
     }
 
     void Game::DestroyResources() {
@@ -33,27 +34,32 @@ namespace val_cg {
     }
 
     void Game::Draw() {
-        // 1. Shadow depth pass (unchanged)
+        auto* dev = GetDevice();
+        auto* cmd = GetCommandList();
+
+        // 1. Shadow depth pass
         if (shadowManager) shadowManager->RenderShadowMaps();
 
-        // 2. Clear depth buffer
-        renderer.deviceContext->ClearDepthStencilView(renderer.depthStencilView, D3D11_CLEAR_DEPTH, 1.f, 0.f);
+        // 2. Clear the scene depth buffer
+        cmd->ClearDepth(dev->GetDepthBuffer(), 1.f);
 
         if (renderingSystem) {
             // 3. Deferred geometry pass: fills G-buffer + depth
             renderingSystem->GeometryPass();
 
             // 4. Clear backbuffer then deferred lighting pass
-            const float black[] = {0.f, 0.f, 0.f, 1.f};
-            renderer.deviceContext->ClearRenderTargetView(renderer.renderTargetView, black);
+            const float black[4] = {0.f, 0.f, 0.f, 1.f};
+            cmd->ClearRenderTarget(dev->GetBackbuffer(), black);
             renderingSystem->LightingPass();
         }
 
         // 5. Forward pass: restore targets, draw non-deferred components
-        renderer.deviceContext->OMSetRenderTargets(1, &renderer.renderTargetView, renderer.depthStencilView);
+        rhi::GpuRenderTarget* bb = dev->GetBackbuffer();
+        cmd->SetRenderTargets(&bb, 1, dev->GetDepthBuffer());
+        cmd->SetViewport(0.f, 0.f, static_cast<float>(GetWidth()), static_cast<float>(GetHeight()));
         if (!renderingSystem) {
-            const float color[] = {0.f, 0.f, 0.f, 1.f};
-            renderer.deviceContext->ClearRenderTargetView(renderer.renderTargetView, color);
+            const float color[4] = {0.f, 0.f, 0.f, 1.f};
+            cmd->ClearRenderTarget(bb, color);
         }
         for (auto& comp : Components) {
             if (renderingSystem && comp->IsDeferred()) continue;
@@ -80,11 +86,8 @@ namespace val_cg {
         while (!isExitRequested) {
             MessageHandler();
 
-            renderer.PrepareFrame();
-
             auto curTime = std::chrono::steady_clock::now();
             float deltaTime = std::chrono::duration_cast<std::chrono::milliseconds>(curTime - PrevTime).count() / 1000.f;
-            //std::cerr << deltaTime << std::endl;
             PrevTime = curTime;
             TotalTime += deltaTime;
 
@@ -93,14 +96,14 @@ namespace val_cg {
                 TotalTime -= 1.f;
                 WCHAR text[256];
                 swprintf_s(text, L"FPS: %.2f", fps);
-                SetWindowTextW(renderer.display.GetWindowHandle(), text);
+                SetWindowTextW(GetWindowHandle(), text);
                 fc = 0;
             }
             UpdateInternal();
             Update(deltaTime);
             FlushPendingLights();
             Draw();
-            renderer.EndFrame();
+            GetDevice()->Present();
             fc++;
         }
         Exit();
@@ -114,8 +117,6 @@ namespace val_cg {
     }
 
     void Game::MessageHandler() {
-        //TODO: reconsider win32 parts
-
         MSG msg = {};
         while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
             TranslateMessage(&msg);
@@ -125,8 +126,6 @@ namespace val_cg {
         if (msg.message == WM_QUIT) {
             isExitRequested = true;
         }
-
-        //TODO: other messages
     }
 
     void Game::Initialize() {

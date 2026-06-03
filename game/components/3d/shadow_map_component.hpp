@@ -1,8 +1,8 @@
 #pragma once
-#include <d3d11.h>
 #include <SimpleMath.h>
 #include "game_component.hpp"
 #include "common_structs.h"
+#include "rhi/graphics_device.hpp"
 
 namespace val_cg {
     class Game;
@@ -19,7 +19,7 @@ namespace val_cg {
         void Initialize()             override;
         void Update(float)            override {}
         void Draw()                   override {}
-        void DestroyResources()       override;
+        void DestroyResources()       override {}   // resources owned by GraphicsDevice
 
         // Called by Game::Draw() before the main color pass.
         void RenderShadowMaps();
@@ -27,14 +27,15 @@ namespace val_cg {
         void DrawDebugShadowMaps();
 
         // Bind shadow resources to PS slots (b1, t0-t2, s0). Used by forward path.
-        void BindForDraw(ID3D11DeviceContext* ctx) const;
+        void BindForDraw(rhi::CommandList* cmd) const;
 
         // Getters for deferred lighting pass.
         const DirectX::SimpleMath::Matrix* GetLightVPs() const { return lightVP; }
         const float* GetCascadeSplits() const { return cascadeSplits; }
-        ID3D11SamplerState* GetShadowSampler() const { return shadowSampler; }
+        rhi::GpuSampler* GetShadowSampler() const { return shadowSampler; }
+        rhi::GpuTexture* GetShadowTexture(int cascade) const { return shadowTex[cascade]; }
         // Bind shadow map SRVs starting at the given PS slot (3 consecutive slots).
-        void BindShadowSRVsDeferred(ID3D11DeviceContext* ctx, int startSlot = 3) const;
+        void BindShadowSRVsDeferred(rhi::CommandList* cmd, int startSlot = 3) const;
 
     private:
         void ComputeCascadeSplits();
@@ -42,26 +43,19 @@ namespace val_cg {
 
         DirectionalLightComponent* light;
 
-        // Per-cascade depth targets
-        ID3D11Texture2D*          shadowTextures[NUM_CASCADES] = {};
-        ID3D11DepthStencilView*   shadowDSVs    [NUM_CASCADES] = {};
-        ID3D11ShaderResourceView* shadowSRVs    [NUM_CASCADES] = {};
+        // Per-cascade depth targets (+ sampleable SRV views).
+        rhi::GpuDepthTarget* shadowDepth[NUM_CASCADES] = {};
+        rhi::GpuTexture*     shadowTex  [NUM_CASCADES] = {};
 
         DirectX::SimpleMath::Matrix lightVP[NUM_CASCADES];
         float cascadeSplits[NUM_CASCADES] = {};  // view-space Z end planes
 
-        // Depth-pass shader resources
-        ID3D11VertexShader*       shadowVS        = nullptr;
-        ID3D11InputLayout*        shadowLayout    = nullptr;
-        ID3D11Buffer*             depthPassCB     = nullptr;  // one matrix, updated per object
-        ID3D11RasterizerState*    shadowRastState = nullptr;
-        ID3D11DepthStencilState*  shadowDSState   = nullptr;
+        // Depth-pass resources
+        rhi::GpuPipeline* shadowPipeline = nullptr;  // VS-only, depth-bias raster
+        rhi::GpuBuffer*   depthPassCB    = nullptr;  // one matrix, updated per object
+        rhi::GpuBuffer*   shadowParamsCB = nullptr;  // ShadowCBData for PhongShader (b1)
+        rhi::GpuSampler*  shadowSampler  = nullptr;  // comparison sampler
 
-        // Shadow params CB sent to PhongShader (b1)
-        ID3D11Buffer*             shadowParamsCB  = nullptr;
-        ID3D11SamplerState*       shadowSampler   = nullptr;
-
-        ID3D11VertexShader* debugVS = nullptr;
-        ID3D11PixelShader* debugPS = nullptr;
+        rhi::GpuPipeline* debugPipeline  = nullptr;
     };
 }

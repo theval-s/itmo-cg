@@ -1,5 +1,8 @@
 #include "moving_point_light_component.hpp"
 #include "game.hpp"
+// DirectXTK's GeometricPrimitive is D3D11-only debug viz; it needs the raw context.
+// This is the one intentional backend escape hatch outside game/rhi/d3d11/.
+#include "rhi/d3d11/d3d11_device.hpp"
 
 namespace val_cg {
     MovingPointLightComponent::MovingPointLightComponent(
@@ -20,8 +23,9 @@ namespace val_cg {
     }
 
     void MovingPointLightComponent::Initialize() {
+        auto* d3d = static_cast<rhi::d3d11::D3D11Device*>(game->GetDevice());
         debugSphere = DirectX::GeometricPrimitive::CreateSphere(
-            game->renderer.deviceContext, 0.3f, 8);
+            d3d->RawContext(), 0.3f, 8);
     }
 
     void MovingPointLightComponent::Update(float deltaTime) {

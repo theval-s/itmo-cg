@@ -26,7 +26,7 @@ namespace val_cg {
         bool IsDeferred() const override { return true; }
 
         // Called by RenderingSystem geometry pass (terrain G-buffer shaders bound externally).
-        void DrawDeferred(ID3D11DeviceContext* ctx, ID3D11Buffer* gbufferCB);
+        void DrawDeferred(rhi::CommandList* cmd, rhi::GpuBuffer* gbufferCB);
 
         // Returns world-space Y of terrain surface at (wx, wz)
         float GetHeightAt(float wx, float wz) const;
@@ -38,8 +38,8 @@ namespace val_cg {
         std::vector<float> heights_;
         std::wstring diffusePath_;
 
-        ID3D11ShaderResourceView* srv_    = nullptr;
-        ID3D11SamplerState*       sampler_ = nullptr;
+        rhi::GpuTexture* srv_     = nullptr;
+        rhi::GpuSampler* sampler_ = nullptr;
 
         static std::vector<float> TryLoadFromFile(const wchar_t* path, int& outRows, int& outCols);
         static std::vector<float> ProceduralHeights(int rows, int cols);
@@ -54,7 +54,7 @@ namespace val_cg {
         void Update(float deltaTime) override;
         void Draw() override;
         bool IsTextured() const override { return true; }
-        void DrawDeferred(ID3D11DeviceContext* ctx, ID3D11Buffer* gbufferCB) override;
+        void DrawDeferred(rhi::CommandList* cmd, rhi::GpuBuffer* gbufferCB) override;
         const DirectX::SimpleMath::Vector3& GetPosition() const { return position; }
         const float& GetRadius() const { return radius; }
         void SetTerrain(TerrainComponent* t) { terrain_ = t; }
@@ -69,7 +69,7 @@ namespace val_cg {
 
         void CheckCollision();
 
-        ID3D11ShaderResourceView* srv_    = nullptr;
-        ID3D11SamplerState*       sampler_ = nullptr;
+        rhi::GpuTexture* srv_     = nullptr;
+        rhi::GpuSampler* sampler_ = nullptr;
     };
 }

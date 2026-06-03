@@ -4,15 +4,15 @@
 
 #pragma once
 
-#include "d3d11.h"
 #include "triangle_component.hpp"
+#include "rhi/graphics_device.hpp"
 #include "SimpleMath.h"
 
 namespace val_cg {
     class BallComponent final : public TriangleComponent {
 
     public:
-        ID3D11Buffer* constantBuffer;
+        rhi::GpuBuffer* constantBuffer = nullptr;
 
 
     public:

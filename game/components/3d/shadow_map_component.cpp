@@ -3,8 +3,6 @@
 #include "lit_mesh_component.hpp"
 #include "game.hpp"
 #include "consts.hpp"
-#include <d3dcompiler.h>
-#include <iostream>
 #include <algorithm>
 #include <cfloat>
 #include <cmath>
@@ -17,124 +15,51 @@ namespace val_cg {
     {}
 
     void ShadowMapComponent::Initialize() {
-        auto* device = game->renderer.device.Get();
+        auto* dev = game->GetDevice();
 
-        // Cascade split planes (view-space Z) using a log/uniform blend
         ComputeCascadeSplits();
 
-        // Shadow map textures (R32_TYPELESS can be bound as D32_FLOAT DSV and R32_FLOAT SRV)
-        D3D11_TEXTURE2D_DESC texDesc = {};
-        texDesc.Width            = SHADOW_MAP_SIZE;
-        texDesc.Height           = SHADOW_MAP_SIZE;
-        texDesc.MipLevels        = 1;
-        texDesc.ArraySize        = 1;
-        texDesc.Format           = DXGI_FORMAT_R32_TYPELESS;
-        texDesc.SampleDesc.Count = 1;
-        texDesc.Usage            = D3D11_USAGE_DEFAULT;
-        texDesc.BindFlags        = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
+        // Per-cascade sampleable depth targets.
+        rhi::TextureDesc dt;
+        dt.width  = SHADOW_MAP_SIZE;
+        dt.height = SHADOW_MAP_SIZE;
+        dt.usage  = rhi::TextureUsage::DepthStencil | rhi::TextureUsage::ShaderResource;
+        for (int i = 0; i < NUM_CASCADES; ++i)
+            shadowDepth[i] = dev->CreateDepthTarget(dt, &shadowTex[i]);
 
-        D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
-        dsvDesc.Format             = DXGI_FORMAT_D32_FLOAT;
-        dsvDesc.ViewDimension      = D3D11_DSV_DIMENSION_TEXTURE2D;
-        dsvDesc.Texture2D.MipSlice = 0;
+        // VS-only depth pipeline. Depth bias fights acne; clamp instead of clip.
+        rhi::PipelineDesc pd;
+        pd.vs = dev->CreateShader(SHADOW_DEPTH_SHADER_PATH, "VSMain", rhi::ShaderStage::Vertex);
+        pd.ps = nullptr;
+        pd.layout.attributes = { {"POSITION", 0, rhi::VertexFormat::Float4} };
+        pd.raster.cull                = rhi::CullMode::None;
+        pd.raster.depthClip           = false;
+        pd.raster.depthBias           = 5000;
+        pd.raster.slopeScaledDepthBias = 1.0f;
+        pd.depth.depthTest  = true;
+        pd.depth.depthWrite = true;
+        pd.depth.func       = rhi::CompareFunc::LessEqual;
+        shadowPipeline = dev->CreatePipeline(pd);
 
-        D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-        srvDesc.Format                    = DXGI_FORMAT_R32_FLOAT;
-        srvDesc.ViewDimension             = D3D11_SRV_DIMENSION_TEXTURE2D;
-        srvDesc.Texture2D.MipLevels       = 1;
-        srvDesc.Texture2D.MostDetailedMip = 0;
+        depthPassCB    = dev->CreateBuffer({rhi::BufferType::Constant, sizeof(Matrix),       /*dynamic*/true});
+        shadowParamsCB = dev->CreateBuffer({rhi::BufferType::Constant, sizeof(ShadowCBData), /*dynamic*/true});
 
-        for (int i = 0; i < NUM_CASCADES; ++i) {
-            device->CreateTexture2D(&texDesc, nullptr, &shadowTextures[i]);
-            device->CreateDepthStencilView(shadowTextures[i], &dsvDesc, &shadowDSVs[i]);
-            device->CreateShaderResourceView(shadowTextures[i], &srvDesc, &shadowSRVs[i]);
-        }
+        // Comparison sampler, border = 1 (lit) so out-of-bounds fragments are unshadowed.
+        shadowSampler = dev->CreateSampler({rhi::Filter::Comparison, rhi::AddressMode::Border,
+                                            rhi::CompareFunc::LessEqual, /*borderColor*/1.f});
 
-        // Shadow depth-pass vertex shader
-        ID3DBlob* vsBlob  = nullptr;
-        ID3DBlob* errBlob = nullptr;
-        HRESULT hr = D3DCompileFromFile(SHADOW_DEPTH_SHADER_PATH, nullptr, nullptr,
-            "VSMain", "vs_5_0",
-            D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0, &vsBlob, &errBlob);
-        if (FAILED(hr)) {
-            if (errBlob) { std::cerr << (char*)errBlob->GetBufferPointer(); errBlob->Release(); }
-            else throw std::runtime_error("ShadowDepth.hlsl not found");
-        }
-        device->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(),
-                                   nullptr, &shadowVS);
-
-        //creating debug shaders
-        hr = D3DCompileFromFile(DEBUG_SHADER_PATH, nullptr, nullptr,
-            "VSMain", "vs_5_0",
-            D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0, &vsBlob, &errBlob);
-        if (FAILED(hr)) {
-            if (errBlob) { std::cerr << (char*)errBlob->GetBufferPointer(); errBlob->Release(); }
-            else throw std::runtime_error("DebugQuad.hlsl not found");
-        }
-        device->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(),
-                                   nullptr, &debugVS);
-
-        hr = D3DCompileFromFile(DEBUG_SHADER_PATH, nullptr, nullptr,
-            "PSMain", "ps_5_0",
-            D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0, &vsBlob, &errBlob);
-        if (FAILED(hr)) {
-            if (errBlob) { std::cerr << (char*)errBlob->GetBufferPointer(); errBlob->Release(); }
-            else throw std::runtime_error("DebugQuad.hlsl not found");
-        }
-        device->CreatePixelShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(),
-                                   nullptr, &debugPS);
-
-        D3D11_INPUT_ELEMENT_DESC posElem = {
-            "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0,
-            D3D11_INPUT_PER_VERTEX_DATA, 0
-        };
-        device->CreateInputLayout(&posElem, 1,
-            vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), &shadowLayout);
-        vsBlob->Release();
-
-        // Per-object depth-pass CB (one 64-byte matrix)
-        D3D11_BUFFER_DESC cbDesc = {};
-        cbDesc.Usage          = D3D11_USAGE_DYNAMIC;
-        cbDesc.BindFlags      = D3D11_BIND_CONSTANT_BUFFER;
-        cbDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-        cbDesc.ByteWidth      = sizeof(Matrix);
-        device->CreateBuffer(&cbDesc, nullptr, &depthPassCB);
-
-        // Shadow-params CB sent to PhongShader (b1)
-        cbDesc.ByteWidth = sizeof(ShadowCBData);
-        device->CreateBuffer(&cbDesc, nullptr, &shadowParamsCB);
-
-        // Rasterizer state with depth bias to reduce shadow acne
-        D3D11_RASTERIZER_DESC rastDesc = {};
-        rastDesc.FillMode              = D3D11_FILL_SOLID;
-        rastDesc.CullMode              = D3D11_CULL_NONE;
-        rastDesc.DepthBias             = 5000;
-        rastDesc.SlopeScaledDepthBias  = 1.0f;
-        rastDesc.DepthClipEnable       = FALSE;  // clamp rather than clip out-of-range depths
-        device->CreateRasterizerState(&rastDesc, &shadowRastState);
-
-        // Depth-stencil state
-        D3D11_DEPTH_STENCIL_DESC dsDesc = {};
-        dsDesc.DepthEnable    = TRUE;
-        dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-        dsDesc.DepthFunc      = D3D11_COMPARISON_LESS_EQUAL;
-        device->CreateDepthStencilState(&dsDesc, &shadowDSState);
-
-        // Comparison sampler: border=1 (lit) so out-of-bounds fragments are unshadowed
-        D3D11_SAMPLER_DESC sampDesc = {};
-        sampDesc.Filter         = D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
-        sampDesc.AddressU       = D3D11_TEXTURE_ADDRESS_BORDER;
-        sampDesc.AddressV       = D3D11_TEXTURE_ADDRESS_BORDER;
-        sampDesc.AddressW       = D3D11_TEXTURE_ADDRESS_BORDER;
-        sampDesc.BorderColor[0] = sampDesc.BorderColor[1] =
-        sampDesc.BorderColor[2] = sampDesc.BorderColor[3] = 1.0f;
-        sampDesc.ComparisonFunc = D3D11_COMPARISON_LESS_EQUAL;
-        sampDesc.MaxLOD         = D3D11_FLOAT32_MAX;
-        device->CreateSamplerState(&sampDesc, &shadowSampler);
+        // Debug overlay pipeline (SV_VertexID quad, no depth test).
+        rhi::PipelineDesc dbg;
+        dbg.vs = dev->CreateShader(DEBUG_SHADER_PATH, "VSMain", rhi::ShaderStage::Vertex);
+        dbg.ps = dev->CreateShader(DEBUG_SHADER_PATH, "PSMain", rhi::ShaderStage::Pixel);
+        dbg.raster.cull     = rhi::CullMode::None;
+        dbg.depth.depthTest  = false;
+        dbg.depth.depthWrite = false;
+        debugPipeline = dev->CreatePipeline(dbg);
     }
 
     void ShadowMapComponent::ComputeCascadeSplits() {
-        constexpr float camNear  = 0.1f;   // practical log-formula near; camera clip near is irrelevant here
+        constexpr float camNear  = 0.1f;
         constexpr float camFar   = SHADOW_FAR;
         constexpr float lambda   = 0.75f;
 
@@ -150,7 +75,6 @@ namespace val_cg {
         auto camData = game->GetCameraData();
         Matrix invVP = (camData.viewMatrix * camData.projMatrix).Invert();
 
-        // Full view-frustum corners in NDC (DirectX: z in [0,1])
         static const DirectX::XMFLOAT3 ndc[8] = {
             {-1,-1, 0}, {1,-1, 0}, {-1, 1, 0}, {1, 1, 0},
             {-1,-1, 1}, {1,-1, 1}, {-1, 1, 1}, {1, 1, 1},
@@ -164,39 +88,19 @@ namespace val_cg {
             worldCorners[i] = Vector3(v.x, v.y, v.z);
         }
 
-        // Build light view matrix (directional: position along toward-light direction)
         Vector3 lightDir{light->direction.x, light->direction.y, light->direction.z};
         lightDir.Normalize();
 
-        Vector3 lightPos = lightDir * 100.f;  // eye of the light
+        Vector3 lightPos = lightDir * 100.f;
         Vector3 up = (fabsf(lightDir.y) > 0.99f) ? Vector3{1,0,0} : Vector3{0,1,0};
         Matrix lightView = Matrix::CreateLookAt(lightPos, Vector3::Zero, up);
 
-        // DEBUG: print once per ~120 frames
-        // static int dbgFrame = 0;
-        // bool dbg = (dbgFrame++ % 120 == 0);
-        // if (dbg) {
-        //     std::cerr << "[CSM-DBG] lightDir=(" << lightDir.x << "," << lightDir.y << "," << lightDir.z
-        //               << ") lightPos=(" << lightPos.x << "," << lightPos.y << "," << lightPos.z << ")\n";
-        //     std::cerr << "[CSM-DBG] worldCorners near[0]=(" << worldCorners[0].x << "," << worldCorners[0].y << "," << worldCorners[0].z << ")"
-        //               << " far[7]=(" << worldCorners[7].x << "," << worldCorners[7].y << "," << worldCorners[7].z << ")\n";
-        //     // also print all 8 corners' light-space Z
-        //     std::cerr << "[CSM-DBG] full frustum lc.z: ";
-        //     for (int i = 0; i < 8; ++i) {
-        //         Vector4 lc = Vector4::Transform(Vector4{worldCorners[i].x, worldCorners[i].y, worldCorners[i].z, 1.f}, lightView);
-        //         std::cerr << lc.z << " ";
-        //     }
-        //     std::cerr << "\n";
-        // }
-
-        // worldCorners span the full camera frustum; fracs must be relative to SHADOW_FAR.
         constexpr float CAM_FAR = SHADOW_FAR;
         float prevSplit = 0.001f;
         for (int c = 0; c < NUM_CASCADES; ++c) {
             float nearFrac = prevSplit        / CAM_FAR;
             float farFrac  = cascadeSplits[c] / CAM_FAR;
 
-            // Sub-frustum corners by linear interpolation along the frustum rays
             Vector3 sub[8];
             for (int i = 0; i < 4; ++i) {
                 Vector3 ray = worldCorners[i + 4] - worldCorners[i];
@@ -204,7 +108,6 @@ namespace val_cg {
                 sub[i + 4] = worldCorners[i] + ray * farFrac;
             }
 
-            // AABB in light space
             float minX =  FLT_MAX, maxX = -FLT_MAX;
             float minY =  FLT_MAX, maxY = -FLT_MAX;
             float minZ =  FLT_MAX, maxZ = -FLT_MAX;
@@ -217,23 +120,6 @@ namespace val_cg {
             }
 
             constexpr float zSlack = 20.f;
-            // if (dbg) {
-            //     std::cerr << "[CSM-DBG] cascade " << c
-            //               << " nearFrac=" << nearFrac << " farFrac=" << farFrac
-            //               << " minZ=" << minZ << " maxZ=" << maxZ
-            //               << " nearZ=" << (-maxZ-zSlack) << " farZ=" << (-minZ+zSlack) << "\n";
-            // }
-
-            // CreateOrthographicOffCenter is RH: near/far must be positive distances
-            // (maps z=-near → NDC 0, z=-far → NDC 1). minZ/maxZ are negative RH Z values,
-            // so negate them: -maxZ is the closest distance, -minZ is the farthest.
-
-            //this is the code that teacher lists in their presentation for LVPM matrix,
-            //constexpr float zMult = 10.0f;
-            //minZ = (minZ < 0) ? minZ * zMult : minZ / zMult;
-            //maxZ = (maxZ < 0) ? maxZ * zMult : maxZ * zMult;
-            //auto lightProj = Matrix::CreateOrthographicOffCenter(minX, maxX, minY, maxY, minZ, maxZ);
-
             Matrix lightProj = Matrix::CreateOrthographicOffCenter(
                 minX, maxX, minY, maxY, -maxZ - zSlack, -minZ + zSlack);
 
@@ -244,117 +130,60 @@ namespace val_cg {
 
     void ShadowMapComponent::RenderShadowMaps() {
         ComputeLightMatrices();
+        auto* cmd = game->GetCommandList();
 
-        auto* ctx = game->renderer.deviceContext;
+        // Unbind shadow SRVs (forward t0-t2, deferred t3-t5) before writing depth.
+        cmd->UnbindTextures(rhi::ShaderStage::Pixel, 0, 6);
 
-        D3D11_VIEWPORT vp = {};
-        vp.Width    = static_cast<float>(SHADOW_MAP_SIZE);
-        vp.Height   = static_cast<float>(SHADOW_MAP_SIZE);
-        vp.MaxDepth = 1.f;
-        ctx->RSSetViewports(1, &vp);
-        ctx->RSSetState(shadowRastState);
-        ctx->OMSetDepthStencilState(shadowDSState, 0);
-        ctx->VSSetShader(shadowVS, nullptr, 0);
-        ctx->PSSetShader(nullptr, nullptr, 0);
-        ctx->IASetInputLayout(shadowLayout);
-        ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        ctx->VSSetConstantBuffers(0, 1, &depthPassCB);
+        cmd->SetViewport(0.f, 0.f, static_cast<float>(SHADOW_MAP_SIZE), static_cast<float>(SHADOW_MAP_SIZE));
+        cmd->SetPipeline(shadowPipeline);
 
-        // Explicitly unbind shadow SRVs before binding the same textures as DSVs.
-    // D3D11 should auto-unbind on resource hazard, but some drivers don't flush it in time.
-    ID3D11ShaderResourceView* nullSRVs[3] = {};
-    ctx->PSSetShaderResources(0, 3, nullSRVs);
-
-    ID3D11RenderTargetView* nullRTV = nullptr;
-
-    for (int c = 0; c < NUM_CASCADES; ++c) {
-            ctx->OMSetRenderTargets(1, &nullRTV, shadowDSVs[c]);
-            ctx->ClearDepthStencilView(shadowDSVs[c], D3D11_CLEAR_DEPTH, 1.f, 0);
+        for (int c = 0; c < NUM_CASCADES; ++c) {
+            cmd->SetRenderTargets(nullptr, 0, shadowDepth[c]);
+            cmd->ClearDepth(shadowDepth[c], 1.f);
 
             for (auto* comp : game->Components) {
                 if (auto* lit = dynamic_cast<LitMeshComponent*>(comp)) {
                     Matrix wlvp = (lit->GetWorldMatrix() * lightVP[c]).Transpose();
-                    D3D11_MAPPED_SUBRESOURCE mapped;
-                    ctx->Map(depthPassCB, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
-                    memcpy(mapped.pData, &wlvp, sizeof(Matrix));
-                    ctx->Unmap(depthPassCB, 0);
-                    lit->DrawDepth();
+                    depthPassCB->Update(&wlvp, sizeof(Matrix));
+                    cmd->SetConstantBuffer(rhi::ShaderStage::Vertex, 0, depthPassCB);
+                    lit->DrawDepth(cmd);
                 }
             }
         }
 
-        // Update the per-frame shadow params CB consumed by PhongShader
+        // Per-frame shadow params CB consumed by PhongShader (forward path).
         ShadowCBData sd{};
-        sd.lightViewProj0   = lightVP[0].Transpose();
-        sd.lightViewProj1   = lightVP[1].Transpose();
-        sd.lightViewProj2   = lightVP[2].Transpose();
-        sd.cascadeSplits    = {cascadeSplits[0], cascadeSplits[1], cascadeSplits[2], 0.f};
-        sd.shadowsEnabled   = 1;
-
-        D3D11_MAPPED_SUBRESOURCE mapped;
-        ctx->Map(shadowParamsCB, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
-        memcpy(mapped.pData, &sd, sizeof(ShadowCBData));
-        ctx->Unmap(shadowParamsCB, 0);
-
-        ctx->OMSetDepthStencilState(nullptr, 0);
+        sd.lightViewProj0 = lightVP[0].Transpose();
+        sd.lightViewProj1 = lightVP[1].Transpose();
+        sd.lightViewProj2 = lightVP[2].Transpose();
+        sd.cascadeSplits  = {cascadeSplits[0], cascadeSplits[1], cascadeSplits[2], 0.f};
+        sd.shadowsEnabled = 1;
+        shadowParamsCB->Update(&sd, sizeof(ShadowCBData));
     }
 
     void ShadowMapComponent::DrawDebugShadowMaps() {
-        auto context = game->renderer.deviceContext;
+        auto* cmd = game->GetCommandList();
+        cmd->SetPipeline(debugPipeline);
 
-        context->VSSetShader(debugVS, nullptr, 0);
-        context->PSSetShader(debugPS, nullptr, 0);
-
-        context->IASetInputLayout(nullptr);
-        context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-        // context->OMSetRenderTargets(1, &game->renderer.renderTargetView, nullptr);
-        for (int cascade = 0; cascade < NUM_CASCADES; ++cascade)
-        {
-            D3D11_VIEWPORT vp{};
-
-            vp.Width  = 256;
-            vp.Height = 256;
-
-            vp.TopLeftX = game->renderer.ScreenWidth - 256;
-            vp.TopLeftY = cascade * (256 + 10) ;
-
-            vp.MinDepth = 0.0f;
-            vp.MaxDepth = 1.0f;
-
-            context->RSSetViewports(1, &vp);
-
-            context->PSSetShaderResources(0, 1,
-                &shadowSRVs[cascade]);
-
-            context->Draw(6, 0);
+        for (int cascade = 0; cascade < NUM_CASCADES; ++cascade) {
+            cmd->SetViewport(static_cast<float>(game->GetWidth() - 256),
+                             static_cast<float>(cascade * (256 + 10)),
+                             256.f, 256.f);
+            cmd->SetTexture(rhi::ShaderStage::Pixel, 0, shadowTex[cascade]);
+            cmd->Draw(6);
         }
     }
 
-    void ShadowMapComponent::BindForDraw(ID3D11DeviceContext* ctx) const {
-        ctx->PSSetConstantBuffers(1, 1, &shadowParamsCB);
-        ID3D11ShaderResourceView* srvs[3] = {shadowSRVs[0], shadowSRVs[1], shadowSRVs[2]};
-        ctx->PSSetShaderResources(0, 3, srvs);
-        ctx->PSSetSamplers(0, 1, &shadowSampler);
+    void ShadowMapComponent::BindForDraw(rhi::CommandList* cmd) const {
+        cmd->SetConstantBuffer(rhi::ShaderStage::Pixel, 1, shadowParamsCB);
+        for (int i = 0; i < NUM_CASCADES; ++i)
+            cmd->SetTexture(rhi::ShaderStage::Pixel, i, shadowTex[i]);
+        cmd->SetSampler(rhi::ShaderStage::Pixel, 0, shadowSampler);
     }
 
-    void ShadowMapComponent::BindShadowSRVsDeferred(ID3D11DeviceContext* ctx, int startSlot) const {
-        ID3D11ShaderResourceView* srvs[3] = {shadowSRVs[0], shadowSRVs[1], shadowSRVs[2]};
-        ctx->PSSetShaderResources(startSlot, 3, srvs);
-    }
-
-    void ShadowMapComponent::DestroyResources() {
-        for (int i = 0; i < NUM_CASCADES; ++i) {
-            if (shadowSRVs[i])     { shadowSRVs[i]->Release();     shadowSRVs[i]     = nullptr; }
-            if (shadowDSVs[i])     { shadowDSVs[i]->Release();     shadowDSVs[i]     = nullptr; }
-            if (shadowTextures[i]) { shadowTextures[i]->Release(); shadowTextures[i] = nullptr; }
-        }
-        if (shadowVS)        { shadowVS->Release();        shadowVS        = nullptr; }
-        if (shadowLayout)    { shadowLayout->Release();    shadowLayout    = nullptr; }
-        if (depthPassCB)     { depthPassCB->Release();     depthPassCB     = nullptr; }
-        if (shadowParamsCB)  { shadowParamsCB->Release();  shadowParamsCB  = nullptr; }
-        if (shadowRastState) { shadowRastState->Release(); shadowRastState = nullptr; }
-        if (shadowDSState)   { shadowDSState->Release();   shadowDSState   = nullptr; }
-        if (shadowSampler)   { shadowSampler->Release();   shadowSampler   = nullptr; }
+    void ShadowMapComponent::BindShadowSRVsDeferred(rhi::CommandList* cmd, int startSlot) const {
+        for (int i = 0; i < NUM_CASCADES; ++i)
+            cmd->SetTexture(rhi::ShaderStage::Pixel, startSlot + i, shadowTex[i]);
     }
 }

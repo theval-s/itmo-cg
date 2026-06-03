@@ -11,22 +11,19 @@
 #include "../game_component.hpp"
 #include "consts.hpp"
 #include "common_structs.h"
-#include "d3d11.h"
+#include "rhi/graphics_device.hpp"
 
 
 namespace val_cg
 {
-    class TriangleComponent : public GameComponent //TODO: crossplatform
+    class TriangleComponent : public GameComponent
     {
     protected:
-        ID3D11InputLayout* layout = nullptr;
-        ID3D11VertexShader* vertexShader = nullptr;
-        ID3DBlob* vertexShaderByteCode = nullptr;
-        ID3D11RasterizerState* rastState = nullptr;
-        ID3D11PixelShader* pixelShader = nullptr;
-        ID3DBlob* pixelShaderByteCode = nullptr;
-        ID3D11Buffer* vb = nullptr;
-        ID3D11Buffer* ib = nullptr;
+        // Pipeline = shaders + input layout + fixed-function state. Created once
+        // (deduplicated in the device's state cache); referenced, not owned.
+        rhi::GpuPipeline* pipeline = nullptr;
+        rhi::GpuBuffer*   vb        = nullptr;
+        rhi::GpuBuffer*   ib        = nullptr;
         std::vector<DirectX::XMFLOAT4> points;
         std::vector<int> indices;
     public:
@@ -35,8 +32,6 @@ namespace val_cg
 
         void Initialize() override;
         void Draw() override;
-        // void Reload() override;
-        // void Update(float deltaTime) override;
         void DestroyResources() override;
     };
 } // val_cg

@@ -1,6 +1,7 @@
 #pragma once
 #include "mesh_component.hpp"
 #include "common_structs.h"
+#include "rhi/graphics_device.hpp"
 
 namespace val_cg {
     // Base for any opaque mesh that participates in Phong lighting and CSM shadows.
@@ -11,12 +12,12 @@ class LitMeshComponent : virtual public MeshComponent {
         explicit LitMeshComponent(Game* game);
 
         // Called by ShadowMapComponent during the depth pass.
-        // Assumes the shadow VS, input layout, and depth CB are already bound.
-        virtual void DrawDepth();
+        // Assumes the shadow pipeline and per-object depth CB are already bound.
+        virtual void DrawDepth(rhi::CommandList* cmd);
 
         // Called by RenderingSystem during the geometry pass.
-        // Assumes the G-buffer shader and input layout are already bound.
-        virtual void DrawDeferred(ID3D11DeviceContext* ctx, ID3D11Buffer* gbufferCB);
+        // Assumes the G-buffer pipeline is already bound.
+        virtual void DrawDeferred(rhi::CommandList* cmd, rhi::GpuBuffer* gbufferCB);
 
         // Returns true for components that also bind a texture in DrawDeferred().
         virtual bool IsTextured() const { return false; }
@@ -33,9 +34,9 @@ class LitMeshComponent : virtual public MeshComponent {
         // Binds shadow resources (b1, t0-t2, s0). Falls back to disabled CB if no shadow manager.
         void BindShadow();
 
-        PhongCBData   cbData{};
-        ID3D11Buffer* phongCB        = nullptr;
-        ShadowCBData  shadowCBData{};
-        ID3D11Buffer* shadowParamsCB = nullptr;
+        PhongCBData     cbData{};
+        rhi::GpuBuffer* phongCB        = nullptr;
+        ShadowCBData    shadowCBData{};
+        rhi::GpuBuffer* shadowParamsCB = nullptr;
     };
 }

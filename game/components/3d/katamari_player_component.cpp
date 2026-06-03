@@ -9,12 +9,10 @@
 #include "consts.hpp"
 #include "utils/geometry_generator.hpp"
 #include <wincodec.h>
-#include <d3dcompiler.h>
 #include <iostream>
 #include "Keys.h"
 #include <cmath>
 #include <algorithm>
-#include <WICTextureLoader.h>
 
 namespace val_cg {
     using namespace DirectX::SimpleMath;
@@ -32,7 +30,7 @@ namespace val_cg {
             heights_ = TryLoadFromFile(heightMapPath, rows_, cols_);
         if (heights_.empty()) {
             std::wcerr << L"[Terrain] WARNING: using flat fallback — check that heightmap exists at the given path\n";
-            heights_.assign(rows_ * cols_, 0.f);   // flat, obviously not the real heightmap
+            heights_.assign(rows_ * cols_, 0.f);
         } else {
             std::wcout << L"[Terrain] loaded " << cols_ << L"x" << rows_ << L" heightmap\n";
         }
@@ -48,109 +46,52 @@ namespace val_cg {
     }
 
     void TerrainComponent::Initialize() {
-        // Compile terrain shader (POSITION + UV-in-COLOR-slot)
-        ID3DBlob* errorCode = nullptr;
-        auto compile = [&](const char* entry, const char* target, ID3DBlob** out) {
-            HRESULT hr = D3DCompileFromFile(TERRAIN_SHADER_PATH, nullptr, nullptr,
-                entry, target, D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0, out, &errorCode);
-            if (FAILED(hr)) {
-                if (errorCode) { std::cerr << (char*)errorCode->GetBufferPointer(); errorCode->Release(); }
-                else throw std::runtime_error("TerrainShader.hlsl not found");
-            }
+        auto* dev = game->GetDevice();
+
+        rhi::PipelineDesc pd;
+        pd.vs = dev->CreateShader(TERRAIN_SHADER_PATH, "VSMain", rhi::ShaderStage::Vertex);
+        pd.ps = dev->CreateShader(TERRAIN_SHADER_PATH, "PSMain", rhi::ShaderStage::Pixel);
+        pd.layout.attributes = {
+            {"POSITION", 0, rhi::VertexFormat::Float4},
+            {"COLOR",    0, rhi::VertexFormat::Float4},
         };
-        compile("VSMain", "vs_5_0", &vertexShaderByteCode);
-        compile("PSMain", "ps_5_0", &pixelShaderByteCode);
+        pd.raster.cull = rhi::CullMode::None;
+        pipeline = dev->CreatePipeline(pd);
 
-        auto* dev = game->renderer.device.Get();
-        dev->CreateVertexShader(vertexShaderByteCode->GetBufferPointer(),
-            vertexShaderByteCode->GetBufferSize(), nullptr, &vertexShader);
-        dev->CreatePixelShader(pixelShaderByteCode->GetBufferPointer(),
-            pixelShaderByteCode->GetBufferSize(), nullptr, &pixelShader);
+        vb = dev->CreateBuffer({rhi::BufferType::Vertex, sizeof(DirectX::XMFLOAT4) * points.size()}, points.data());
+        ib = dev->CreateBuffer({rhi::BufferType::Index,  sizeof(int) * indices.size()},            indices.data());
+        constantBuffer = dev->CreateBuffer({rhi::BufferType::Constant, sizeof(TerrainCBData), /*dynamic*/true});
 
-        D3D11_INPUT_ELEMENT_DESC elems[] = {
-            {"POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0,                          D3D11_INPUT_PER_VERTEX_DATA, 0},
-            {"COLOR",    0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
-        };
-        dev->CreateInputLayout(elems, 2,
-            vertexShaderByteCode->GetBufferPointer(), vertexShaderByteCode->GetBufferSize(), &layout);
-
-        D3D11_BUFFER_DESC vbDesc = {};
-        vbDesc.Usage = D3D11_USAGE_DEFAULT; vbDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-        vbDesc.ByteWidth = static_cast<UINT>(sizeof(DirectX::XMFLOAT4) * points.size());
-        D3D11_SUBRESOURCE_DATA vbData = { points.data() };
-        dev->CreateBuffer(&vbDesc, &vbData, &vb);
-
-        D3D11_BUFFER_DESC ibDesc = {};
-        ibDesc.Usage = D3D11_USAGE_DEFAULT; ibDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-        ibDesc.ByteWidth = static_cast<UINT>(sizeof(int) * indices.size());
-        D3D11_SUBRESOURCE_DATA ibData = { indices.data() };
-        dev->CreateBuffer(&ibDesc, &ibData, &ib);
-
-        D3D11_BUFFER_DESC cbDesc = {};
-        cbDesc.Usage = D3D11_USAGE_DYNAMIC; cbDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-        cbDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE; cbDesc.ByteWidth = sizeof(TerrainCBData);
-        dev->CreateBuffer(&cbDesc, nullptr, &constantBuffer);
-
-        CD3D11_RASTERIZER_DESC rastDesc = {};
-        rastDesc.CullMode = D3D11_CULL_NONE; rastDesc.FillMode = D3D11_FILL_SOLID;
-        dev->CreateRasterizerState(&rastDesc, &rastState);
-
-        // Diffuse texture
-        if (!diffusePath_.empty()) {
-            HRESULT hr = DirectX::CreateWICTextureFromFile(dev, diffusePath_.c_str(), nullptr, &srv_);
-            if (FAILED(hr))
-                std::wcerr << L"[TerrainComponent] failed to load diffuse: " << diffusePath_ << L"\n";
-        }
-
-        D3D11_SAMPLER_DESC sampDesc = {};
-        sampDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-        sampDesc.AddressU = sampDesc.AddressV = sampDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-        sampDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-        sampDesc.MaxLOD = D3D11_FLOAT32_MAX;
-        dev->CreateSamplerState(&sampDesc, &sampler_);
+        if (!diffusePath_.empty())
+            srv_ = dev->CreateTextureFromFile(diffusePath_.c_str());
+        sampler_ = dev->CreateSampler({rhi::Filter::Linear, rhi::AddressMode::Wrap});
     }
 
     void TerrainComponent::Draw() {
-        auto* ctx = game->renderer.deviceContext;
-        ctx->RSSetState(rastState);
-
-        D3D11_VIEWPORT vp = {};
-        vp.Width = static_cast<float>(game->renderer.ScreenWidth);
-        vp.Height = static_cast<float>(game->renderer.ScreenHeight);
-        vp.MaxDepth = 1.f;
-        ctx->RSSetViewports(1, &vp);
-
-        const UINT stride = 32, offset = 0;
-        ctx->IASetInputLayout(layout);
-        ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        ctx->IASetVertexBuffers(0, 1, &vb, &stride, &offset);
-        ctx->IASetIndexBuffer(ib, DXGI_FORMAT_R32_UINT, 0);
-        ctx->VSSetShader(vertexShader, nullptr, 0);
-        ctx->PSSetShader(pixelShader, nullptr, 0);
+        auto* cmd = game->GetCommandList();
+        cmd->SetPipeline(pipeline);
+        cmd->SetVertexBuffer(vb, 32);
+        cmd->SetIndexBuffer(ib, rhi::IndexFormat::Uint32);
 
         TerrainCBData tcb;
-        tcb.worldViewProj = data.matrix;  // already computed as (world*view*proj).T by Update()
+        tcb.worldViewProj = data.matrix;  // (world*view*proj).T from Update()
         tcb.world         = worldMatrix.Transpose();
+        constantBuffer->Update(&tcb, sizeof(TerrainCBData));
+        cmd->SetConstantBuffer(rhi::ShaderStage::Vertex, 0, constantBuffer);
 
-        D3D11_MAPPED_SUBRESOURCE mapped = {};
-        ctx->Map(constantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
-        memcpy(mapped.pData, &tcb, sizeof(TerrainCBData));
-        ctx->Unmap(constantBuffer, 0);
-        ctx->VSSetConstantBuffers(0, 1, &constantBuffer);
-
-        // Bind shadow maps at t0-t2, shadow sampler at s0 (b1 is the shadow params CB)
+        // Shadow maps at t0-t2 + sampler s0, shadow params at b1.
         if (auto* shadowMgr = game->GetShadowManager())
-            shadowMgr->BindForDraw(ctx);
+            shadowMgr->BindForDraw(cmd);
 
-        // Diffuse texture at t3, regular sampler at s1 — avoids overwriting shadow slots
-        ctx->PSSetShaderResources(3, 1, &srv_);
-        ctx->PSSetSamplers(1, 1, &sampler_);
-        ctx->DrawIndexed(static_cast<UINT>(indices.size()), 0, 0);
+        // Diffuse at t3, regular sampler at s1 — avoids overwriting shadow slots.
+        cmd->SetTexture(rhi::ShaderStage::Pixel, 3, srv_);
+        cmd->SetSampler(rhi::ShaderStage::Pixel, 1, sampler_);
+        cmd->DrawIndexed(static_cast<unsigned>(indices.size()));
     }
 
     void TerrainComponent::Update(float dt) { MeshComponent::Update(dt); }
 
-    void TerrainComponent::DrawDeferred(ID3D11DeviceContext* ctx, ID3D11Buffer* gbCB) {
+    void TerrainComponent::DrawDeferred(rhi::CommandList* cmd, rhi::GpuBuffer* gbCB) {
         GBufferCBData cb = {};
         const auto camData = game->GetCameraData();
         cb.worldViewProj = (worldMatrix * camData.viewMatrix * camData.projMatrix).Transpose();
@@ -158,22 +99,17 @@ namespace val_cg {
         cb.matDiffuse    = {1.f, 1.f, 1.f, 1.f};   // texture provides color
         cb.matSpecular   = {0.3f, 0.3f, 0.3f, 8.f};
 
-        D3D11_MAPPED_SUBRESOURCE mapped = {};
-        ctx->Map(gbCB, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
-        memcpy(mapped.pData, &cb, sizeof(GBufferCBData));
-        ctx->Unmap(gbCB, 0);
-        ctx->VSSetConstantBuffers(0, 1, &gbCB);
-        ctx->PSSetConstantBuffers(0, 1, &gbCB);
+        gbCB->Update(&cb, sizeof(GBufferCBData));
+        cmd->SetConstantBuffer(rhi::ShaderStage::Vertex, 0, gbCB);
+        cmd->SetConstantBuffer(rhi::ShaderStage::Pixel,  0, gbCB);
 
-        // Bind diffuse texture and sampler at slots expected by GBufferTerrainShader.
-        ctx->PSSetShaderResources(0, 1, &srv_);
-        ctx->PSSetSamplers(0, 1, &sampler_);
+        // Diffuse texture + sampler at the slots GBufferTerrainShader expects (t0/s0).
+        cmd->SetTexture(rhi::ShaderStage::Pixel, 0, srv_);
+        cmd->SetSampler(rhi::ShaderStage::Pixel, 0, sampler_);
 
-        const UINT stride = 32, offset = 0;
-        ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        ctx->IASetVertexBuffers(0, 1, &vb, &stride, &offset);
-        ctx->IASetIndexBuffer(ib, DXGI_FORMAT_R32_UINT, 0);
-        ctx->DrawIndexed(static_cast<UINT>(indices.size()), 0, 0);
+        cmd->SetVertexBuffer(vb, 32);
+        cmd->SetIndexBuffer(ib, rhi::IndexFormat::Uint32);
+        cmd->DrawIndexed(static_cast<unsigned>(indices.size()));
     }
 
     float TerrainComponent::GetHeightAt(float wx, float wz) const {
@@ -224,7 +160,6 @@ namespace val_cg {
         std::vector<BYTE> raw(w * h);
         conv->CopyPixels(nullptr, w, static_cast<UINT>(w * h), raw.data());
 
-        // Flip rows: image row 0 (top) → terrain far side (+Z), matching "north = top" convention
         std::vector<float> heights(w * h);
         for (int r = 0; r < outRows; ++r)
             for (int c = 0; c < outCols; ++c)
@@ -252,6 +187,8 @@ namespace val_cg {
         return h;
     }
 
+    // ---- KatamariPlayerComponent ----
+
     KatamariPlayerComponent::KatamariPlayerComponent(Game* game)
         : MeshComponent(game)
         , LitMeshComponent(game)
@@ -261,47 +198,23 @@ namespace val_cg {
         MeshData mesh = GeometryGenerator::CreateSphere(1.0f, 16, 16, {});
         for (const auto& v : mesh.vertices) {
             points.push_back(v.position);
-            points.push_back(v.color); // placeholder; overwritten in Initialize()
+            points.push_back(v.color); // placeholder; overwritten below
         }
         indices = mesh.indices;
     }
 
     void KatamariPlayerComponent::Initialize() {
-        ID3DBlob* errorCode = nullptr;
-        auto* dev = game->renderer.device.Get();
+        auto* dev = game->GetDevice();
 
-        HRESULT res = D3DCompileFromFile(SIMPLE_TEXTURED_SHADER_PATH, nullptr, nullptr,
-            "VSMain", "vs_5_0",
-            D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0,
-            &vertexShaderByteCode, &errorCode);
-        if (FAILED(res)) {
-            if (errorCode) { std::cerr << (char*)errorCode->GetBufferPointer(); errorCode->Release(); }
-            else throw std::runtime_error("MegaSimpleTextureShader.hlsl not found");
-        }
-
-        res = D3DCompileFromFile(SIMPLE_TEXTURED_SHADER_PATH, nullptr, nullptr,
-            "PSMain", "ps_5_0",
-            D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0,
-            &pixelShaderByteCode, &errorCode);
-        if (FAILED(res)) {
-            if (errorCode) { std::cerr << (char*)errorCode->GetBufferPointer(); errorCode->Release(); }
-            else throw std::runtime_error("MegaSimpleTextureShader.hlsl not found");
-        }
-
-        dev->CreateVertexShader(vertexShaderByteCode->GetBufferPointer(),
-            vertexShaderByteCode->GetBufferSize(), nullptr, &vertexShader);
-        dev->CreatePixelShader(pixelShaderByteCode->GetBufferPointer(),
-            pixelShaderByteCode->GetBufferSize(), nullptr, &pixelShader);
-
-        D3D11_INPUT_ELEMENT_DESC inputElements[] = {
-            {"POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0,
-             D3D11_INPUT_PER_VERTEX_DATA, 0},
-            {"COLOR",    0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT,
-             D3D11_INPUT_PER_VERTEX_DATA, 0},
+        rhi::PipelineDesc pd;
+        pd.vs = dev->CreateShader(SIMPLE_TEXTURED_SHADER_PATH, "VSMain", rhi::ShaderStage::Vertex);
+        pd.ps = dev->CreateShader(SIMPLE_TEXTURED_SHADER_PATH, "PSMain", rhi::ShaderStage::Pixel);
+        pd.layout.attributes = {
+            {"POSITION", 0, rhi::VertexFormat::Float4},
+            {"COLOR",    0, rhi::VertexFormat::Float4},
         };
-        dev->CreateInputLayout(inputElements, 2,
-            vertexShaderByteCode->GetBufferPointer(),
-            vertexShaderByteCode->GetBufferSize(), &layout);
+        pd.raster.cull = rhi::CullMode::None;
+        pipeline = dev->CreatePipeline(pd);
 
         // Build PhongVertex buffer. Sphere of radius=1 → normal == position (w=0).
         int vertexCount = static_cast<int>(points.size()) / 2;
@@ -312,40 +225,17 @@ namespace val_cg {
             phongVerts.push_back({p, {p.x, p.y, p.z, 0.f}});
         }
 
-        D3D11_BUFFER_DESC vbDesc = {};
-        vbDesc.Usage     = D3D11_USAGE_DEFAULT;
-        vbDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-        vbDesc.ByteWidth = static_cast<UINT>(sizeof(PhongVertex) * phongVerts.size());
-        D3D11_SUBRESOURCE_DATA vbData = {phongVerts.data()};
-        dev->CreateBuffer(&vbDesc, &vbData, &vb);
-
-        D3D11_BUFFER_DESC ibDesc = {};
-        ibDesc.Usage     = D3D11_USAGE_DEFAULT;
-        ibDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-        ibDesc.ByteWidth = static_cast<UINT>(sizeof(int) * indices.size());
-        D3D11_SUBRESOURCE_DATA ibData = {indices.data()};
-        dev->CreateBuffer(&ibDesc, &ibData, &ib);
+        vb = dev->CreateBuffer({rhi::BufferType::Vertex, sizeof(PhongVertex) * phongVerts.size()}, phongVerts.data());
+        ib = dev->CreateBuffer({rhi::BufferType::Index,  sizeof(int) * indices.size()},           indices.data());
 
         InitLitBuffers();
-
-        CD3D11_RASTERIZER_DESC rastDesc = {};
-        rastDesc.CullMode = D3D11_CULL_NONE;
-        rastDesc.FillMode = D3D11_FILL_SOLID;
-        dev->CreateRasterizerState(&rastDesc, &rastState);
 
         cbData.matAmbient  = {0.15f, 0.15f, 0.15f, 0.f};
         cbData.matDiffuse  = {0.9f, 0.9f, 0.9f, 0.f};
         cbData.matSpecular = {0.4f, 0.4f, 0.4f, 8.f};
 
-        // Cobblestone diffuse texture
-        DirectX::CreateWICTextureFromFile(dev, L"./textures/cobblestone.png",
-            nullptr, &srv_);
-
-        D3D11_SAMPLER_DESC sampDesc = {};
-        sampDesc.Filter   = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-        sampDesc.AddressU = sampDesc.AddressV = sampDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-        sampDesc.MaxLOD   = D3D11_FLOAT32_MAX;
-        dev->CreateSamplerState(&sampDesc, &sampler_);
+        srv_     = dev->CreateTextureFromFile(L"./textures/cobblestone.png");
+        sampler_ = dev->CreateSampler({rhi::Filter::Linear, rhi::AddressMode::Wrap});
 
         rollRotation = Quaternion::Identity;
         rollMatrix   = Matrix::Identity;
@@ -372,11 +262,6 @@ namespace val_cg {
             if (input->IsKeyDown(Keys::Down))  moveDir -= camForward;
             if (input->IsKeyDown(Keys::Left))  moveDir += camLeft;
             if (input->IsKeyDown(Keys::Right)) moveDir -= camLeft;
-
-            // if (input->IsKeyDown(Keys::Up))    moveDir.z += 1.f;
-            // if (input->IsKeyDown(Keys::Down))  moveDir.z -= 1.f;
-            // if (input->IsKeyDown(Keys::Left))  moveDir.x += 1.f;
-            // if (input->IsKeyDown(Keys::Right)) moveDir.x -= 1.f;
         }
 
         if (moveDir.LengthSquared() > 0.f) {
@@ -384,28 +269,19 @@ namespace val_cg {
             float dist = speed * deltaTime;
             position += moveDir * dist;
 
-            //keep rolling rolling rolling
             float rollAngle = dist / radius;
-
             Vector3 rollAxis = Vector3::Up.Cross(moveDir);
-
-            if (rollAxis.LengthSquared() > 0.f)
-            {
+            if (rollAxis.LengthSquared() > 0.f) {
                 rollAxis.Normalize();
-
-                Quaternion deltaRot =
-                    Quaternion::CreateFromAxisAngle(rollAxis, rollAngle);
-
+                Quaternion deltaRot = Quaternion::CreateFromAxisAngle(rollAxis, rollAngle);
                 rollRotation = rollRotation* deltaRot;
                 rollRotation.Normalize();
-
                 rollMatrix = Matrix::CreateFromQuaternion(rollRotation);
             }
         }
 
         CheckCollision();
 
-        // keep ball sitting on terrain surface
         if (terrain_)
             position.y = terrain_->GetHeightAt(position.x, position.z) + radius;
 
@@ -417,34 +293,21 @@ namespace val_cg {
     }
 
     void KatamariPlayerComponent::Draw() {
-        auto* ctx = game->renderer.deviceContext;
-        ctx->RSSetState(rastState);
-
-        D3D11_VIEWPORT viewport = {};
-        viewport.Width    = static_cast<float>(game->renderer.ScreenWidth);
-        viewport.Height   = static_cast<float>(game->renderer.ScreenHeight);
-        viewport.MaxDepth = 1.0f;
-        ctx->RSSetViewports(1, &viewport);
-
-        constexpr UINT stride = sizeof(PhongVertex), offset = 0;
-        ctx->IASetInputLayout(layout);
-        ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        ctx->IASetVertexBuffers(0, 1, &vb, &stride, &offset);
-        ctx->IASetIndexBuffer(ib, DXGI_FORMAT_R32_UINT, 0);
-        ctx->VSSetShader(vertexShader, nullptr, 0);
-        ctx->PSSetShader(pixelShader, nullptr, 0);
+        auto* cmd = game->GetCommandList();
+        cmd->SetPipeline(pipeline);
+        cmd->SetVertexBuffer(vb, sizeof(PhongVertex));
+        cmd->SetIndexBuffer(ib, rhi::IndexFormat::Uint32);
 
         BindPhongCB(worldMatrix);
         BindShadow();
 
-        ctx->PSSetShaderResources(3, 1, &srv_);
-        ctx->PSSetSamplers(1, 1, &sampler_);
+        cmd->SetTexture(rhi::ShaderStage::Pixel, 3, srv_);
+        cmd->SetSampler(rhi::ShaderStage::Pixel, 1, sampler_);
 
-        ctx->DrawIndexed(static_cast<UINT>(indices.size()), 0, 0);
+        cmd->DrawIndexed(static_cast<unsigned>(indices.size()));
     }
 
-    void KatamariPlayerComponent::DrawDeferred(ID3D11DeviceContext* ctx, ID3D11Buffer* gbCB) {
-        // Upload GBufferCBData (transform + materials).
+    void KatamariPlayerComponent::DrawDeferred(rhi::CommandList* cmd, rhi::GpuBuffer* gbCB) {
         const auto camData = game->GetCameraData();
         GBufferCBData cb = {};
         cb.worldViewProj = (worldMatrix * camData.viewMatrix * camData.projMatrix).Transpose();
@@ -452,22 +315,17 @@ namespace val_cg {
         cb.matDiffuse    = cbData.matDiffuse;
         cb.matSpecular   = cbData.matSpecular;
 
-        D3D11_MAPPED_SUBRESOURCE mapped = {};
-        ctx->Map(gbCB, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
-        memcpy(mapped.pData, &cb, sizeof(GBufferCBData));
-        ctx->Unmap(gbCB, 0);
-        ctx->VSSetConstantBuffers(0, 1, &gbCB);
-        ctx->PSSetConstantBuffers(0, 1, &gbCB);
+        gbCB->Update(&cb, sizeof(GBufferCBData));
+        cmd->SetConstantBuffer(rhi::ShaderStage::Vertex, 0, gbCB);
+        cmd->SetConstantBuffer(rhi::ShaderStage::Pixel,  0, gbCB);
 
-        // Bind cobblestone texture at t0 (GBufferTexturedShader reads t0/s0).
-        ctx->PSSetShaderResources(0, 1, &srv_);
-        ctx->PSSetSamplers(0, 1, &sampler_);
+        // Cobblestone texture at t0 (GBufferTexturedShader reads t0/s0).
+        cmd->SetTexture(rhi::ShaderStage::Pixel, 0, srv_);
+        cmd->SetSampler(rhi::ShaderStage::Pixel, 0, sampler_);
 
-        constexpr UINT stride = sizeof(PhongVertex), offset = 0;
-        ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        ctx->IASetVertexBuffers(0, 1, &vb, &stride, &offset);
-        ctx->IASetIndexBuffer(ib, DXGI_FORMAT_R32_UINT, 0);
-        ctx->DrawIndexed(static_cast<UINT>(indices.size()), 0, 0);
+        cmd->SetVertexBuffer(vb, sizeof(PhongVertex));
+        cmd->SetIndexBuffer(ib, rhi::IndexFormat::Uint32);
+        cmd->DrawIndexed(static_cast<unsigned>(indices.size()));
     }
 
     void KatamariPlayerComponent::CheckCollision() {
@@ -480,9 +338,7 @@ namespace val_cg {
                     const auto& c = model->GetCollider().Center;
                     Vector3 worldOffset = Vector3(c.x, c.y, c.z) - position;
                     model->AttachTo(&position, &rollMatrix, worldOffset);
-
                     radius *=1.1f;
-                // position.y corrected by terrain in Update
                 }
             }
         }

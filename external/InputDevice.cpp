@@ -16,12 +16,12 @@ namespace val_cg {
 		Rid[0].usUsagePage = 0x01;
 		Rid[0].usUsage = 0x02;
 		Rid[0].dwFlags = 0;   // adds HID mouse and also ignores legacy mouse messages
-		Rid[0].hwndTarget = game->renderer.display.GetWindowHandle();
+		Rid[0].hwndTarget = game->GetWindowHandle();
 
 		Rid[1].usUsagePage = 0x01;
 		Rid[1].usUsage = 0x06;
 		Rid[1].dwFlags = 0;   // adds HID keyboard and also ignores legacy keyboard messages
-		Rid[1].hwndTarget = game->renderer.display.GetWindowHandle();
+		Rid[1].hwndTarget = game->GetWindowHandle();
 
 		if (RegisterRawInputDevices(Rid, 2, sizeof(Rid[0])) == FALSE)
 		{
@@ -68,7 +68,7 @@ namespace val_cg {
 
 		POINT p;
 		GetCursorPos(&p);
-		ScreenToClient(game->renderer.display.GetWindowHandle(), &p);
+		ScreenToClient(game->GetWindowHandle(), &p);
 
 		if (args.Mode & MOUSE_MOVE_ABSOLUTE)
 		{

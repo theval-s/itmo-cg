@@ -4,7 +4,7 @@
 
 #pragma once
 #include "model_component.hpp"
-#include <d3d11.h>
+#include "rhi/graphics_device.hpp"
 #include <string>
 
 namespace val_cg {
@@ -24,8 +24,8 @@ namespace val_cg {
 
     private:
         std::wstring texturePath;
-        ID3D11ShaderResourceView* srv = nullptr;
-        ID3D11SamplerState* sampler   = nullptr;
+        rhi::GpuTexture* srv     = nullptr;
+        rhi::GpuSampler* sampler = nullptr;
         int vertexCount = 0;
     };
 }

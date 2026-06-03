@@ -6,7 +6,7 @@
 
 #include "game_component.hpp"
 #include "triangle_component.hpp"
-#include "d3d11.h"
+#include "rhi/graphics_device.hpp"
 #include "SimpleMath.h"
 #include "DirectXCollision.h"
 
@@ -20,7 +20,7 @@ namespace val_cg {
             Top,
             Bottom
         };
-        ID3D11Buffer* constantBuffer = nullptr;
+        rhi::GpuBuffer* constantBuffer = nullptr;
         DirectX::BoundingBox collider;
 
 

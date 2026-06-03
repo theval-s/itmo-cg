@@ -14,7 +14,7 @@ namespace val_cg {
 
     OrbitComponent::OrbitComponent(Game* game, PlanetComponent *parent, int segmentCount, float orbitRadius,
         DirectX::XMFLOAT4 color): MeshComponent(game), parent(parent) {
-        topology = D3D10_PRIMITIVE_TOPOLOGY_LINELIST;
+        topology = rhi::PrimitiveTopology::LineList;
         points.clear();
         indices.clear();
 
@@ -86,7 +86,7 @@ namespace val_cg {
 
     void PlanetComponent::MakeLineList(const DirectX::XMFLOAT4& color) {
         MeshData mesh = GeometryGenerator::CreateSphereLineList((parent)?0.1f:0.5f,10,10, color);
-        topology = D3D11_PRIMITIVE_TOPOLOGY_LINELIST;
+        topology = rhi::PrimitiveTopology::LineList;
 
         //todo: change the whole structure
         std::vector<DirectX::XMFLOAT4> tempPoints;
@@ -101,7 +101,7 @@ namespace val_cg {
 
     void PlanetComponent::MakeTriangleList(const DirectX::XMFLOAT4& color) {
         MeshData mesh = GeometryGenerator::CreateSphere((parent)?0.1f:0.5f,10,10, color);
-        topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+        topology = rhi::PrimitiveTopology::TriangleList;
 
         //todo: change the whole structure
         std::vector<DirectX::XMFLOAT4> tempPoints;
