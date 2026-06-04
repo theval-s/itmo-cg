@@ -12,6 +12,7 @@
 #include "components/3d/light_shooter_component.hpp"
 #include "components/3d/shadow_map_component.hpp"
 #include "components/3d/lights/spot_light_component.hpp"
+#include "components/3d/particle_system_component.hpp"
 #include "game/game.hpp"
 #include "game/components/paddle_component.hpp"
 #include <random>
@@ -89,6 +90,13 @@ void GenerateKatamari(val_cg::Game* game) {
     game->GetCamera()->SetOrbitTarget(&player->GetPosition(), &player->GetRadius(), 8.f);
 
     game->Components.push_back(new val_cg::LightShooterComponent(game));
+
+    // Particle fountain at the centre of the scene.
+    {
+        Vector3 fountainPos{0.f, 0.f, 0.f};
+        fountainPos.y = terrain->GetHeightAt(fountainPos.x, fountainPos.z);
+        game->Components.push_back(new val_cg::ParticleSystemComponent(game, fountainPos));
+    }
 
     // Spot light pointing straight down over the starting area
     game->AddLight(new val_cg::SpotLightComponent(

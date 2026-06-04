@@ -68,6 +68,11 @@ namespace val_cg::rhi {
         BufferType  type    = BufferType::Vertex;
         size_t      byteWidth = 0;
         bool        dynamic = false;   // CPU-writable each frame (constant buffers)
+
+        // ---- Structured-buffer extras (compute / GPU-driven particles) ----
+        unsigned    structureStride = 0;  // element size for Structured buffers
+        bool        uav     = false;      // create an unordered-access view (compute-writable)
+        bool        append  = false;      // UAV carries a hidden append/consume counter
     };
 
     struct TextureDesc {

@@ -15,14 +15,17 @@ namespace val_cg::rhi::d3d11 {
     class D3D11Shader : public GpuShader {
     public:
         ShaderStage              stage{};
-        ComPtr<ID3D11VertexShader> vs;   // valid when stage == Vertex
-        ComPtr<ID3D11PixelShader>  ps;   // valid when stage == Pixel
+        ComPtr<ID3D11VertexShader>  vs;   // valid when stage == Vertex
+        ComPtr<ID3D11PixelShader>   ps;   // valid when stage == Pixel
+        ComPtr<ID3D11ComputeShader> cs;   // valid when stage == Compute
         ComPtr<ID3DBlob>           bytecode;  // kept only for input-layout creation at pipeline build
     };
 
     class D3D11Buffer : public GpuBuffer {
     public:
-        ComPtr<ID3D11Buffer>     buffer;
+        ComPtr<ID3D11Buffer>             buffer;
+        ComPtr<ID3D11ShaderResourceView> srv;  // structured buffers read in shaders
+        ComPtr<ID3D11UnorderedAccessView> uav; // structured buffers written in compute
         ID3D11DeviceContext*     ctx     = nullptr;  // non-owning
         bool                     dynamic = false;
 

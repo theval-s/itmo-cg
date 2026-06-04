@@ -29,6 +29,7 @@ add_executable(itmo_cg main.cpp
         game/components/3d/light_shooter_component.cpp
         game/components/3d/lit_mesh_component.cpp
         game/components/3d/lights/spot_light_component.cpp
+        game/components/3d/particle_system_component.cpp
         game/rendering/gbuffer.cpp
         game/rendering/rendering_system.cpp
         external/Delegates.cpp

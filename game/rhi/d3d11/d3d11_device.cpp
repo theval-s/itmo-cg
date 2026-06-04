@@ -94,12 +94,44 @@ namespace val_cg::rhi::d3d11 {
             case BufferType::Vertex:   bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;   break;
             case BufferType::Index:    bd.BindFlags = D3D11_BIND_INDEX_BUFFER;    break;
             case BufferType::Constant: bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER; break;
+            case BufferType::Structured:
+                // SRV always (read in VS); UAV when compute writes it.
+                bd.BindFlags        = D3D11_BIND_SHADER_RESOURCE | (desc.uav ? D3D11_BIND_UNORDERED_ACCESS : 0);
+                bd.MiscFlags        = D3D11_RESOURCE_MISC_BUFFERSTRUCTURED;
+                bd.StructureByteStride = desc.structureStride;
+                break;
+            case BufferType::IndirectArgs:
+                bd.BindFlags = 0;
+                bd.MiscFlags = D3D11_RESOURCE_MISC_DRAWINDIRECT_ARGS;
+                break;
         }
         bd.CPUAccessFlags = desc.dynamic ? D3D11_CPU_ACCESS_WRITE : 0;
 
         D3D11_SUBRESOURCE_DATA init = {};
         init.pSysMem = initialData;
         device->CreateBuffer(&bd, initialData ? &init : nullptr, &buf->buffer);
+
+        // Structured buffers get an SRV (and optionally a UAV) over their elements.
+        if (desc.type == BufferType::Structured && desc.structureStride > 0) {
+            const UINT numElements = static_cast<UINT>(desc.byteWidth / desc.structureStride);
+
+            D3D11_SHADER_RESOURCE_VIEW_DESC sv = {};
+            sv.Format              = DXGI_FORMAT_UNKNOWN;  // structured
+            sv.ViewDimension       = D3D11_SRV_DIMENSION_BUFFER;
+            sv.Buffer.FirstElement = 0;
+            sv.Buffer.NumElements  = numElements;
+            device->CreateShaderResourceView(buf->buffer.Get(), &sv, &buf->srv);
+
+            if (desc.uav) {
+                D3D11_UNORDERED_ACCESS_VIEW_DESC uv = {};
+                uv.Format              = DXGI_FORMAT_UNKNOWN;
+                uv.ViewDimension       = D3D11_UAV_DIMENSION_BUFFER;
+                uv.Buffer.FirstElement = 0;
+                uv.Buffer.NumElements  = numElements;
+                uv.Buffer.Flags        = desc.append ? D3D11_BUFFER_UAV_FLAG_APPEND : 0;
+                device->CreateUnorderedAccessView(buf->buffer.Get(), &uv, &buf->uav);
+            }
+        }
 
         GpuBuffer* raw = buf.get();
         buffers.push_back(std::move(buf));
@@ -116,7 +148,9 @@ namespace val_cg::rhi::d3d11 {
 #ifndef NDEBUG
         flags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
 #endif
-        const char* target = (stage == ShaderStage::Vertex) ? "vs_5_0" : "ps_5_0";
+        const char* target = (stage == ShaderStage::Vertex)  ? "vs_5_0"
+                            : (stage == ShaderStage::Compute) ? "cs_5_0"
+                                                              : "ps_5_0";
 
         ComPtr<ID3DBlob> blob, error;
         HRESULT hr = D3DCompileFromFile(path, nullptr, nullptr, entry, target, flags, 0,
@@ -132,6 +166,8 @@ namespace val_cg::rhi::d3d11 {
         shader->bytecode = blob;
         if (stage == ShaderStage::Vertex)
             device->CreateVertexShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &shader->vs);
+        else if (stage == ShaderStage::Compute)
+            device->CreateComputeShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &shader->cs);
         else
             device->CreatePixelShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &shader->ps);
 

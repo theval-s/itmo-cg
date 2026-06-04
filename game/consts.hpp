@@ -23,4 +23,7 @@ namespace val_cg {
     constexpr wchar_t GBUFFER_TEXTURED_SHADER_PATH[] = L"./shaders/GBufferTexturedShader.hlsl";
     constexpr wchar_t GBUFFER_TERRAIN_SHADER_PATH[]  = L"./shaders/GBufferTerrainShader.hlsl";
     constexpr wchar_t LIGHTING_SHADER_PATH[]         = L"./shaders/LightingShader.hlsl";
+
+    // Particle system
+    constexpr wchar_t PARTICLE_SHADER_PATH[]         = L"./shaders/ParticleShader.hlsl";
 }

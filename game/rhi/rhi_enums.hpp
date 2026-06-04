@@ -9,6 +9,7 @@ namespace val_cg::rhi {
     enum class ShaderStage {
         Vertex,
         Pixel,
+        Compute,
     };
 
     enum class CullMode {
@@ -91,6 +92,8 @@ namespace val_cg::rhi {
         Vertex,
         Index,
         Constant,
+        Structured,    // GPU-addressable array (RWStructuredBuffer / StructuredBuffer)
+        IndirectArgs,  // source of args for indirect draws (DrawIndexedInstancedIndirect)
     };
 
     // Sampler filtering / addressing.
