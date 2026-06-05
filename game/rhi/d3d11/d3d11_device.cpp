@@ -97,7 +97,7 @@ namespace val_cg::rhi::d3d11 {
             case BufferType::Structured:
                 // SRV always (read in VS); UAV when compute writes it.
                 bd.BindFlags        = D3D11_BIND_SHADER_RESOURCE | (desc.uav ? D3D11_BIND_UNORDERED_ACCESS : 0);
-                bd.MiscFlags        = D3D11_RESOURCE_MISC_BUFFERSTRUCTURED;
+                bd.MiscFlags        = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
                 bd.StructureByteStride = desc.structureStride;
                 break;
             case BufferType::IndirectArgs:

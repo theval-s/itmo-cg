@@ -34,10 +34,10 @@ namespace val_cg {
             pd.raster.cull = rhi::CullMode::None;
             gbufferPipe = dev->CreatePipeline(pd);
         }
-        // Textured lit meshes — share the GBuffer VS, swap the PS.
+        // Textured lit meshes — own VS (emits local objPos for spherical UV) + textured PS.
         {
             rhi::PipelineDesc pd;
-            pd.vs = dev->CreateShader(GBUFFER_SHADER_PATH,          "VSMain", rhi::ShaderStage::Vertex);
+            pd.vs = dev->CreateShader(GBUFFER_TEXTURED_SHADER_PATH, "VSMain", rhi::ShaderStage::Vertex);
             pd.ps = dev->CreateShader(GBUFFER_TEXTURED_SHADER_PATH, "PSMain", rhi::ShaderStage::Pixel);
             pd.layout.attributes = litLayout;
             pd.raster.cull = rhi::CullMode::None;
