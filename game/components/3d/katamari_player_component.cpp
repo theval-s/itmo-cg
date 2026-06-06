@@ -230,9 +230,11 @@ namespace val_cg {
 
         InitLitBuffers();
 
-        cbData.matAmbient  = {0.15f, 0.15f, 0.15f, 0.f};
-        cbData.matDiffuse  = {0.9f, 0.9f, 0.9f, 0.f};
-        cbData.matSpecular = {0.4f, 0.4f, 0.4f, 8.f};
+        // Stone-like material: full-strength diffuse so the cobblestone colour
+        // comes through, weak + low-shininess specular (rough, matte surface).
+        cbData.matAmbient  = {0.20f, 0.20f, 0.20f, 0.f};
+        cbData.matDiffuse  = {1.0f, 1.0f, 1.0f, 0.f};
+        cbData.matSpecular = {0.08f, 0.08f, 0.08f, 12.f};
 
         srv_     = dev->CreateTextureFromFile(L"./textures/cobblestone.png");
         sampler_ = dev->CreateSampler({rhi::Filter::Linear, rhi::AddressMode::Wrap});
