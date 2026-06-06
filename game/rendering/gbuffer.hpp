@@ -16,9 +16,11 @@ namespace val_cg {
 
         rhi::GpuTexture* DiffuseSpec() const { return tex0; }  // t0
         rhi::GpuTexture* Normal()      const { return tex1; }  // t1
+        rhi::GpuTexture* ObjectId()    const { return tex2; }  // object-id (R32F, picking)
 
     private:
         rhi::GpuRenderTarget* rt0 = nullptr;  rhi::GpuTexture* tex0 = nullptr;  // DiffuseSpec
         rhi::GpuRenderTarget* rt1 = nullptr;  rhi::GpuTexture* tex1 = nullptr;  // Normal
+        rhi::GpuRenderTarget* rt2 = nullptr;  rhi::GpuTexture* tex2 = nullptr;  // ObjectId
     };
 }

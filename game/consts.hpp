@@ -26,4 +26,7 @@ namespace val_cg {
 
     // Particle system
     constexpr wchar_t PARTICLE_SHADER_PATH[]         = L"./shaders/ParticleShader.hlsl";
+
+    // GPU picking compute shader
+    constexpr wchar_t PICK_SHADER_PATH[]             = L"./shaders/PickShader.hlsl";
 }

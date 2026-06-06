@@ -22,6 +22,10 @@ namespace val_cg {
         // Returns true for components handled by RenderingSystem (deferred path).
         // Game::Draw() skips forward-rendering these when a RenderingSystem is active.
         virtual bool IsDeferred() const { return false; }
+
+        // Per-object id written to the G-buffer id target for GPU picking.
+        // 0 = unset/background; assigned once during scene setup.
+        int objectId = 0;
     };
 
 }

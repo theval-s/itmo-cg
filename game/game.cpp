@@ -51,6 +51,13 @@ namespace val_cg {
             const float black[4] = {0.f, 0.f, 0.f, 1.f};
             cmd->ClearRenderTarget(dev->GetBackbuffer(), black);
             renderingSystem->LightingPass();
+
+            // 4b. GPU picking — G-buffer is filled this frame, read it before the
+            // forward pass rebinds the depth buffer as a render target.
+            if (pickPending) {
+                renderingSystem->Pick(pickX, pickY);
+                pickPending = false;
+            }
         }
 
         // 5. Forward pass: restore targets, draw non-deferred components
@@ -158,6 +165,7 @@ namespace val_cg {
 
     void Game::FlushPendingLights() {
         for (auto* l : pendingLights) {
+            l->objectId = nextObjectId++;
             l->Initialize();
             Components.push_back(l);
             lightSources.push_back(l);
@@ -170,5 +178,19 @@ namespace val_cg {
             debugDraw = !debugDraw;
             std::cout << "Debug Draw: " << debugDraw << std::endl;
         }
+
+        // Edge-detect a left click and record the client-space pixel for the pick pass.
+        const bool leftDown = inputDevice->IsKeyDown(Keys::LeftButton);
+        if (leftDown && !prevLeftDown) {
+            // TODO: crossplatform — GetCursorPos/ScreenToClient are Win32-only;
+            // move cursor-to-client conversion behind the platform layer.
+            POINT p;
+            GetCursorPos(&p);
+            ScreenToClient(GetWindowHandle(), &p);
+            pickX = p.x;
+            pickY = p.y;
+            pickPending = true;
+        }
+        prevLeftDown = leftDown;
     }
 } // val_cg

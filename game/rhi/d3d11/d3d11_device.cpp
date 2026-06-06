@@ -90,6 +90,20 @@ namespace val_cg::rhi::d3d11 {
         D3D11_BUFFER_DESC bd = {};
         bd.ByteWidth = static_cast<UINT>(desc.byteWidth);
         bd.Usage     = desc.dynamic ? D3D11_USAGE_DYNAMIC : D3D11_USAGE_DEFAULT;
+
+        // CPU-readable staging buffer: no bind flags, no misc flags, READ access.
+        // CopyResource into this from a DEFAULT buffer only needs a matching
+        // ByteWidth, so the structured/stride metadata is intentionally omitted.
+        if (desc.readback) {
+            bd.Usage          = D3D11_USAGE_STAGING;
+            bd.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+            bd.BindFlags      = 0;
+            device->CreateBuffer(&bd, nullptr, &buf->buffer);
+            GpuBuffer* raw = buf.get();
+            buffers.push_back(std::move(buf));
+            return raw;
+        }
+
         switch (desc.type) {
             case BufferType::Vertex:   bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;   break;
             case BufferType::Index:    bd.BindFlags = D3D11_BIND_INDEX_BUFFER;    break;

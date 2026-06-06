@@ -8,6 +8,7 @@ cbuffer GBufferCB : register(b0) {
     matrix world;
     float4 matDiffuse;
     float4 matSpecular;
+    float4 objectId;    // x = per-object id
 };
 
 Texture2D  diffuseTex : register(t0);
@@ -27,6 +28,7 @@ struct PS_IN {
 struct GBuf {
     float4 diffSpec : SV_Target0;
     float4 normal   : SV_Target1;
+    float  id       : SV_Target2;
 };
 
 PS_IN VSMain(VS_IN input) {
@@ -49,5 +51,6 @@ GBuf PSMain(PS_IN input) {
 
     o.diffSpec = float4(texCol * matDiffuse.rgb, matSpecular.w / 128.0);
     o.normal   = float4(n, 0.f);
+    o.id       = objectId.x;
     return o;
 }

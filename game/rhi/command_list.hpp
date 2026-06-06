@@ -55,6 +55,10 @@ namespace val_cg::rhi {
         virtual void CopyStructureCount(GpuBuffer* dst, unsigned dstOffset,
                                         GpuBuffer* appendBuffer) = 0;
 
+        // Copy the entire contents of `src` into `dst` (same byte width). Used to
+        // stage a compute result into a readback buffer before GpuBuffer::Readback.
+        virtual void CopyBuffer(GpuBuffer* dst, GpuBuffer* src) = 0;
+
         // Convenience: unbind a contiguous range of textures (avoids RTV/SRV hazards).
         virtual void UnbindTextures(ShaderStage stage, unsigned slot, int count) = 0;
         // Unbind a contiguous range of compute UAVs (so the buffers can be read as SRVs).

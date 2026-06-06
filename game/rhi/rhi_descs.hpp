@@ -73,6 +73,7 @@ namespace val_cg::rhi {
         unsigned    structureStride = 0;  // element size for Structured buffers
         bool        uav     = false;      // create an unordered-access view (compute-writable)
         bool        append  = false;      // UAV carries a hidden append/consume counter
+        bool        readback = false;     // CPU-readable staging buffer (CopyBuffer dst + Readback)
     };
 
     struct TextureDesc {

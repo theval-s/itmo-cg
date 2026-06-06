@@ -62,7 +62,7 @@ void GenerateKatamari(val_cg::Game* game) {
         L"./textures/heightmap.png",
         L"./textures/terrain_diffuse.png",
         30.f, 30.f, 5.f);
-    game->Components.push_back(terrain);
+    game->AddComponent(terrain);
 
     auto* sun = new val_cg::DirectionalLightComponent(game, {1,1.f,0}, {1.f,0.9f,0.8f});
     game->AddLight(sun);
@@ -75,27 +75,27 @@ void GenerateKatamari(val_cg::Game* game) {
         pos.y = terrain->GetHeightAt(pos.x, pos.z);
         float s = def.scale * scaleMult(gen);
         if (i % 5 == 0) {
-            game->Components.push_back(new val_cg::TexturedModelComponent(
+            game->AddComponent(new val_cg::TexturedModelComponent(
                 game, def.path, L"./models/mouse_diffuse.png", pos, s));
         } else if (i%5 == 3) {
-            game->Components.push_back(new val_cg::LitModelComponent(game, "models/diamond.obj", pos, s));
+            game->AddComponent(new val_cg::LitModelComponent(game, "models/diamond.obj", pos, s));
         } else {
-            game->Components.push_back(new val_cg::LitModelComponent(game, def.path, pos, s));
+            game->AddComponent(new val_cg::LitModelComponent(game, def.path, pos, s));
         }
     }
 
     auto* player = new val_cg::KatamariPlayerComponent(game);
     player->SetTerrain(terrain);
-    game->Components.push_back(player);
+    game->AddComponent(player);
     game->GetCamera()->SetOrbitTarget(&player->GetPosition(), &player->GetRadius(), 8.f);
 
-    game->Components.push_back(new val_cg::LightShooterComponent(game));
+    game->AddComponent(new val_cg::LightShooterComponent(game));
 
     // Particle fountain at the centre of the scene.
     {
         Vector3 fountainPos{0.f, 0.f, 0.f};
         fountainPos.y = terrain->GetHeightAt(fountainPos.x, fountainPos.z);
-        game->Components.push_back(new val_cg::ParticleSystemComponent(game, fountainPos));
+        game->AddComponent(new val_cg::ParticleSystemComponent(game, fountainPos));
     }
 
     // Spot light pointing straight down over the starting area

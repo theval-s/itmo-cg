@@ -6,6 +6,7 @@ cbuffer GBufferCB : register(b0) {
     matrix world;
     float4 matDiffuse;
     float4 matSpecular; // w = shininess
+    float4 objectId;    // x = per-object id
 };
 
 struct VS_IN {
@@ -21,6 +22,7 @@ struct PS_IN {
 struct GBuf {
     float4 diffSpec : SV_Target0;  // RT0: diffuse rgb + packed shininess
     float4 normal   : SV_Target1;  // RT1: world-space normal xyz (FP16, stored signed)
+    float  id       : SV_Target2;  // RT2: per-object id (R32F)
 };
 
 PS_IN VSMain(VS_IN input) {
@@ -36,5 +38,6 @@ GBuf PSMain(PS_IN input) {
     float3 n = normalize(input.worldNorm);
     o.diffSpec = float4(matDiffuse.rgb, matSpecular.w / 128.0);
     o.normal   = float4(n, 0.f);
+    o.id       = objectId.x;
     return o;
 }

@@ -18,6 +18,11 @@ namespace val_cg {
         void GeometryPass();
         void LightingPass();
 
+        // GPU picking: dispatch a compute shader that samples the G-buffer at the
+        // clicked pixel, then read the id/world-pos/normal back and log it.
+        // Must run after GeometryPass (the G-buffer must be filled this frame).
+        void Pick(int clickX, int clickY);
+
         void SetShadowManager(ShadowMapComponent* sm) { shadowManager = sm; }
 
     private:
@@ -37,5 +42,11 @@ namespace val_cg {
 
         rhi::GpuBuffer*   gbufferCB      = nullptr;  // GBufferCBData
         rhi::GpuBuffer*   lightingCB     = nullptr;  // LightingCBData
+
+        // Picking resources.
+        rhi::GpuShader*   pickCS         = nullptr;  // PickShader.hlsl CSMain
+        rhi::GpuBuffer*   pickCB         = nullptr;  // PickCBData
+        rhi::GpuBuffer*   pickResultBuf  = nullptr;  // RWStructuredBuffer<PickResult> (u0)
+        rhi::GpuBuffer*   pickStaging    = nullptr;  // CPU-readable copy of the result
     };
 }

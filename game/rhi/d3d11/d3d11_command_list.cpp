@@ -134,6 +134,12 @@ namespace val_cg::rhi::d3d11 {
         if (d && a) ctx->CopyStructureCount(d, dstOffset, a);
     }
 
+    void D3D11CommandList::CopyBuffer(GpuBuffer* dst, GpuBuffer* src) {
+        auto* d = dst ? static_cast<D3D11Buffer*>(dst)->buffer.Get() : nullptr;
+        auto* s = src ? static_cast<D3D11Buffer*>(src)->buffer.Get() : nullptr;
+        if (d && s) ctx->CopyResource(d, s);
+    }
+
     void D3D11CommandList::UnbindTextures(ShaderStage stage, unsigned slot, int count) {
         ID3D11ShaderResourceView* nulls[16] = {};
         if (count > 16) count = 16;

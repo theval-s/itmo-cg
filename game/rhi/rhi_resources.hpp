@@ -22,6 +22,9 @@ namespace val_cg::rhi {
         virtual ~GpuBuffer() = default;
         // Upload `bytes` from `data` (dynamic buffers only — map/discard).
         virtual void Update(const void* data, size_t bytes) = 0;
+        // Copy `bytes` from a readback (staging) buffer into `dst`. Blocks until the
+        // GPU has finished producing the data (map with CPU read). No-op otherwise.
+        virtual void Readback(void* dst, size_t bytes) {}
     };
 
     // Immutable bundle of shaders + vertex layout + fixed-function state.

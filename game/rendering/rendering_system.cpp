@@ -5,6 +5,7 @@
 #include "components/3d/katamari_player_component.hpp"
 #include "components/3d/shadow_map_component.hpp"
 #include "components/3d/lights/spot_light_component.hpp"
+#include <iostream>
 
 namespace val_cg {
     using namespace DirectX::SimpleMath;
@@ -73,6 +74,25 @@ namespace val_cg {
 
         gbufferCB  = dev->CreateBuffer({rhi::BufferType::Constant, sizeof(GBufferCBData),  /*dynamic*/true});
         lightingCB = dev->CreateBuffer({rhi::BufferType::Constant, sizeof(LightingCBData), /*dynamic*/true});
+
+        // Picking: compute shader + its CB + a 1-element result buffer with a
+        // CPU-readable staging copy.
+        pickCS = dev->CreateShader(PICK_SHADER_PATH, "CSMain", rhi::ShaderStage::Compute);
+        pickCB = dev->CreateBuffer({rhi::BufferType::Constant, sizeof(PickCBData), /*dynamic*/true});
+
+        rhi::BufferDesc resDesc;
+        resDesc.type            = rhi::BufferType::Structured;
+        resDesc.byteWidth       = sizeof(PickResultData);
+        resDesc.structureStride = sizeof(PickResultData);
+        resDesc.uav             = true;
+        pickResultBuf = dev->CreateBuffer(resDesc);
+
+        rhi::BufferDesc stageDesc;
+        stageDesc.type            = rhi::BufferType::Structured;
+        stageDesc.byteWidth       = sizeof(PickResultData);
+        stageDesc.structureStride = sizeof(PickResultData);
+        stageDesc.readback        = true;
+        pickStaging = dev->CreateBuffer(stageDesc);
     }
 
     // -------------------------------------------------------------------------
@@ -194,5 +214,50 @@ namespace val_cg {
 
         // Unbind G-buffer + depth SRVs so the depth texture can be re-bound as DSV.
         cmd->UnbindTextures(rhi::ShaderStage::Pixel, 0, 3);
+    }
+
+    // -------------------------------------------------------------------------
+    void RenderingSystem::Pick(int clickX, int clickY) {
+        auto* dev = game->GetDevice();
+        auto* cmd = game->GetCommandList();
+
+        // Ignore clicks outside the client area.
+        if (clickX < 0 || clickY < 0 ||
+            clickX >= game->GetWidth() || clickY >= game->GetHeight())
+            return;
+
+        PickCBData cb = {};
+        const auto camData = game->GetCameraData();
+        cb.invViewProj = (camData.viewMatrix * camData.projMatrix).Invert().Transpose();
+        cb.clickX  = static_cast<unsigned>(clickX);
+        cb.clickY  = static_cast<unsigned>(clickY);
+        cb.screenW = static_cast<float>(game->GetWidth());
+        cb.screenH = static_cast<float>(game->GetHeight());
+        pickCB->Update(&cb, sizeof(PickCBData));
+
+        // Inputs: id (t0), depth (t1), normal (t2); output: result UAV (u0).
+        cmd->SetConstantBuffer(rhi::ShaderStage::Compute, 0, pickCB);
+        cmd->SetTexture(rhi::ShaderStage::Compute, 0, gbuffer.ObjectId());
+        cmd->SetTexture(rhi::ShaderStage::Compute, 1, dev->GetDepthTexture());
+        cmd->SetTexture(rhi::ShaderStage::Compute, 2, gbuffer.Normal());
+        cmd->SetComputeShader(pickCS);
+        cmd->SetComputeUAV(0, pickResultBuf);
+        cmd->Dispatch(1, 1, 1);
+
+        // Release the bindings, then stage + read back the single result element.
+        cmd->UnbindComputeUAVs(0, 1);
+        cmd->UnbindTextures(rhi::ShaderStage::Compute, 0, 3);
+        cmd->SetComputeShader(nullptr);
+
+        cmd->CopyBuffer(pickStaging, pickResultBuf);
+        PickResultData r = {};
+        pickStaging->Readback(&r, sizeof(r));
+
+        if (r.id == 0)
+            std::cout << "[pick] (" << clickX << ", " << clickY << ") -> background\n";
+        else
+            std::cout << "[pick] (" << clickX << ", " << clickY << ") -> object id " << r.id
+                      << "  world(" << r.wx << ", " << r.wy << ", " << r.wz << ")"
+                      << "  normal(" << r.nx << ", " << r.ny << ", " << r.nz << ")\n";
     }
 }

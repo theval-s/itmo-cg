@@ -98,6 +98,7 @@ namespace val_cg {
         cb.world         = worldMatrix.Transpose();
         cb.matDiffuse    = {1.f, 1.f, 1.f, 1.f};   // texture provides color
         cb.matSpecular   = {0.3f, 0.3f, 0.3f, 8.f};
+        cb.objectId      = {static_cast<float>(objectId), 0.f, 0.f, 0.f};
 
         gbCB->Update(&cb, sizeof(GBufferCBData));
         cmd->SetConstantBuffer(rhi::ShaderStage::Vertex, 0, gbCB);
@@ -316,6 +317,7 @@ namespace val_cg {
         cb.world         = worldMatrix.Transpose();
         cb.matDiffuse    = cbData.matDiffuse;
         cb.matSpecular   = cbData.matSpecular;
+        cb.objectId      = {static_cast<float>(objectId), 0.f, 0.f, 0.f};
 
         gbCB->Update(&cb, sizeof(GBufferCBData));
         cmd->SetConstantBuffer(rhi::ShaderStage::Vertex, 0, gbCB);

@@ -32,6 +32,7 @@ namespace val_cg::rhi::d3d11 {
         void SetComputeUAV(unsigned slot, GpuBuffer* buf, unsigned initialCount) override;
         void Dispatch(unsigned groupsX, unsigned groupsY, unsigned groupsZ) override;
         void CopyStructureCount(GpuBuffer* dst, unsigned dstOffset, GpuBuffer* appendBuffer) override;
+        void CopyBuffer(GpuBuffer* dst, GpuBuffer* src) override;
 
         void UnbindTextures(ShaderStage stage, unsigned slot, int count) override;
         void UnbindComputeUAVs(unsigned slot, int count) override;

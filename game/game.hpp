@@ -52,7 +52,17 @@ namespace val_cg {
         bool IsCameraCreated() const { return isCameraCreated; }
         bool IsDebugDrawEnabled() const { return debugDraw; }
 
+        // Register a component and stamp it with a unique object id (for GPU picking).
+        // Prefer this over Components.push_back so ids stay unique and stable.
+        template <typename T>
+        T* AddComponent(T* c) {
+            c->objectId = nextObjectId++;
+            Components.push_back(c);
+            return c;
+        }
+
         void AddLight(LightComponent* l) {
+            l->objectId = nextObjectId++;
             Components.push_back(l);
             lightSources.push_back(l);
         }
@@ -77,6 +87,12 @@ namespace val_cg {
         int score = 0;
         bool isCameraCreated = false;
         bool debugDraw = false;
+        int  nextObjectId = 1;   // 0 reserved for "background / nothing" in the id buffer
+
+        // Left-click picking: edge-detect the button and stash the click pixel for Draw().
+        bool prevLeftDown = false;
+        bool pickPending  = false;
+        int  pickX = 0, pickY = 0;
 
         CameraComponent* camera = nullptr;
         InputDevice* inputDevice = nullptr;

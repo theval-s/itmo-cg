@@ -53,7 +53,8 @@ namespace val_cg {
         DirectX::SimpleMath::Matrix world;           // 64
         DirectX::XMFLOAT4 matDiffuse;               // 16
         DirectX::XMFLOAT4 matSpecular;              // 16  w = shininess
-    };  // 160 bytes
+        DirectX::XMFLOAT4 objectId;                 // 16  x = per-object id (written to id RT)
+    };  // 176 bytes
 
     struct LightingCBData {           // b0 in lighting pass
         DirectX::SimpleMath::Matrix invViewProj;    // 64  = (view*proj).Invert().Transpose()
@@ -80,6 +81,25 @@ namespace val_cg {
     };  // 464 bytes
 
     static constexpr int CSM_NUM_CASCADES = 3;
+
+    // ---- GPU picking (compute shader) ----
+
+    // b0 in the picking compute shader.
+    struct PickCBData {
+        DirectX::SimpleMath::Matrix invViewProj;    // 64  = (view*proj).Invert().Transpose()
+        unsigned clickX;                             //  4  click pixel (client-space)
+        unsigned clickY;                             //  4
+        float    screenW;                            //  4
+        float    screenH;                            //  4
+    };  // 80 bytes
+
+    // One RWStructuredBuffer element the compute shader writes; read back to CPU.
+    // Tightly packed (4-byte scalars) to match the HLSL struct stride.
+    struct PickResultData {
+        unsigned id;                // object id under the cursor (0 = background)
+        float wx, wy, wz;           // reconstructed world position
+        float nx, ny, nz;           // world-space normal
+    };  // 28 bytes
 
     // Constant buffer for TerrainShader (slot b0).
     struct TerrainCBData {

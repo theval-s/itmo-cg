@@ -40,6 +40,16 @@ namespace val_cg::rhi::d3d11 {
                 ctx->UpdateSubresource(buffer.Get(), 0, nullptr, data, 0, 0);
             }
         }
+
+        // Map a STAGING buffer for CPU read (blocks until the GPU copy finishes).
+        void Readback(void* dst, size_t bytes) override {
+            if (!buffer || !ctx) return;
+            D3D11_MAPPED_SUBRESOURCE mapped = {};
+            if (SUCCEEDED(ctx->Map(buffer.Get(), 0, D3D11_MAP_READ, 0, &mapped))) {
+                memcpy(dst, mapped.pData, bytes);
+                ctx->Unmap(buffer.Get(), 0);
+            }
+        }
     };
 
     // States (rs/bs/dss) are owned by the device's state cache; the pipeline only
