@@ -52,6 +52,20 @@ namespace val_cg {
             drawPipe = dev->CreatePipeline(pd);
         }
 
+        // Shadow pipeline: depth-only, no vertex buffer (VS expands quads), clamp
+        // depth like the mesh shadow pass so casters between light and slice still write.
+        {
+            rhi::PipelineDesc pd;
+            pd.vs = dev->CreateShader(PARTICLE_SHADER_PATH, "VSShadow", rhi::ShaderStage::Vertex);
+            pd.ps = nullptr;
+            pd.raster.cull      = rhi::CullMode::None;
+            pd.raster.depthClip = false;
+            pd.depth.depthTest  = true;
+            pd.depth.depthWrite = true;
+            pd.depth.func       = rhi::CompareFunc::LessEqual;
+            shadowPipe = dev->CreatePipeline(pd);
+        }
+
         // Particle pool — zero-initialised so every slot starts dead (energy == 0).
         std::vector<GpuParticle> zeros(maxParticles);
         rhi::BufferDesc pbd;
@@ -80,6 +94,7 @@ namespace val_cg {
         indexBuffer = dev->CreateBuffer({rhi::BufferType::Index, sizeof(quad)}, quad);
 
         cb = dev->CreateBuffer({rhi::BufferType::Constant, sizeof(ParticleCBData), /*dynamic*/true});
+        shadowCB = dev->CreateBuffer({rhi::BufferType::Constant, sizeof(ParticleShadowCBData), /*dynamic*/true});
     }
 
     // -------------------------------------------------------------------------
@@ -152,6 +167,29 @@ namespace val_cg {
         cmd->SetIndexBuffer(indexBuffer, rhi::IndexFormat::Uint32);
         cmd->DrawIndexedInstancedIndirect(indirectArgs, 0);
 
+        cmd->UnbindTextures(rhi::ShaderStage::Vertex, 0, 2);
+    }
+
+    // -------------------------------------------------------------------------
+    // Depth-only render of the alive particles into one shadow cascade. Runs at
+    // the top of the frame (shadow pass) using last frame's GPU sim results — the
+    // indirect InstanceCount is 0 until the first simulate, so frame 0 is a no-op.
+    void ParticleSystemComponent::DrawShadowDepth(rhi::CommandList* cmd,
+                                                  const Matrix& lightVP,
+                                                  const Vector3& lightDir) {
+        ParticleShadowCBData data{};
+        data.lightViewProj = lightVP.Transpose();
+        data.lightDir      = {lightDir.x, lightDir.y, lightDir.z, 0.f};
+        shadowCB->Update(&data, sizeof(ParticleShadowCBData));
+
+        cmd->SetConstantBuffer(rhi::ShaderStage::Vertex, 1, shadowCB);
+        cmd->SetBufferSRV(rhi::ShaderStage::Vertex, 0, particleBuffer);
+        cmd->SetBufferSRV(rhi::ShaderStage::Vertex, 1, aliveList);
+        cmd->SetPipeline(shadowPipe);
+        cmd->SetIndexBuffer(indexBuffer, rhi::IndexFormat::Uint32);
+        cmd->DrawIndexedInstancedIndirect(indirectArgs, 0);
+
+        // Release the VS SRVs so the buffers can be rebound as compute UAVs in Draw().
         cmd->UnbindTextures(rhi::ShaderStage::Vertex, 0, 2);
     }
 }

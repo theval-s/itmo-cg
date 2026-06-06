@@ -44,6 +44,14 @@ AppendStructuredBuffer<uint> aliveListAppend : register(u1);
 StructuredBuffer<Particle> particles : register(t0);
 StructuredBuffer<uint>     aliveList  : register(t1);
 
+// Shadow-pass constants: the light's world->clip matrix for one cascade plus the
+// (normalized) light direction used to orient the depth billboards toward the light.
+cbuffer ParticleShadowCB : register(b1)
+{
+    matrix lightViewProj;  // world -> light clip (transposed for HLSL)
+    float4 lightDir;       // xyz: directional light direction
+};
+
 // --- Hash-based RNG (PCG-ish): cheap per-thread randomness ---
 uint Hash(uint x)
 {
@@ -152,4 +160,28 @@ float4 PSMain(PS_IN i) : SV_Target
     float  falloff = saturate(1.0 - r);
     falloff *= falloff;                 // brighter core, soft edge
     return float4(i.color.rgb, i.color.a * falloff);
+}
+
+// =========================== Shadow depth ================================
+// Depth-only pass: expand each alive particle into a quad that faces the light
+// and write it into a cascade's shadow map. Treated as opaque so the fountain
+// casts a soft speckled shadow. No pixel shader — depth output only.
+float4 VSShadow(uint vertexId : SV_VertexID, uint instanceId : SV_InstanceID) : SV_POSITION
+{
+    Particle p = particles[aliveList[instanceId]];
+
+    // Orthonormal billboard basis perpendicular to the light direction.
+    float3 L     = normalize(lightDir.xyz);
+    float3 up0   = abs(L.y) > 0.99 ? float3(1, 0, 0) : float3(0, 1, 0);
+    float3 right = normalize(cross(up0, L));
+    float3 up    = cross(L, right);
+
+    const float2 corners[4] = {
+        float2(-1,  1), float2( 1,  1), float2( 1, -1), float2(-1, -1)
+    };
+    float2 c = corners[vertexId];
+    float  h = p.size * 0.5;
+
+    float3 worldPos = p.pos + (right * c.x + up * c.y) * h;
+    return mul(float4(worldPos, 1.0), lightViewProj);
 }

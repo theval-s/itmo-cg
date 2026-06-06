@@ -1,6 +1,7 @@
 #include "shadow_map_component.hpp"
 #include "lights/directional_light_component.hpp"
 #include "lit_mesh_component.hpp"
+#include "particle_system_component.hpp"
 #include "game.hpp"
 #include "consts.hpp"
 #include <algorithm>
@@ -150,12 +151,16 @@ namespace val_cg {
         cmd->UnbindTextures(rhi::ShaderStage::Pixel, 0, 6);
 
         cmd->SetViewport(0.f, 0.f, static_cast<float>(SHADOW_MAP_SIZE), static_cast<float>(SHADOW_MAP_SIZE));
-        cmd->SetPipeline(shadowPipeline);
+
+        Vector3 lightDir{light->direction.x, light->direction.y, light->direction.z};
+        lightDir.Normalize();
 
         for (int c = 0; c < NUM_CASCADES; ++c) {
             cmd->SetRenderTargets(nullptr, 0, shadowDepth[c]);
             cmd->ClearDepth(shadowDepth[c], 1.f);
 
+            // Opaque casters (meshes/terrain) — shared VS-only depth pipeline.
+            cmd->SetPipeline(shadowPipeline);
             for (auto* comp : game->Components) {
                 if (auto* lit = dynamic_cast<LitMeshComponent*>(comp)) {
                     Matrix wlvp = (lit->GetWorldMatrix() * lightVP[c]).Transpose();
@@ -163,6 +168,12 @@ namespace val_cg {
                     cmd->SetConstantBuffer(rhi::ShaderStage::Vertex, 0, depthPassCB);
                     lit->DrawDepth(cmd);
                 }
+            }
+
+            // Particle systems cast shadows too (own pipeline + structured-buffer draw).
+            for (auto* comp : game->Components) {
+                if (auto* ps = dynamic_cast<ParticleSystemComponent*>(comp))
+                    ps->DrawShadowDepth(cmd, lightVP[c], lightDir);
             }
         }
 

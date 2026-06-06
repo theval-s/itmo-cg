@@ -33,6 +33,12 @@ namespace val_cg {
         void Draw() override;
         void DestroyResources() override {}   // GPU resources owned by the device
 
+        // Render the alive particles into one shadow cascade as light-facing depth
+        // billboards. Called by ShadowMapComponent during the shadow pass.
+        void DrawShadowDepth(rhi::CommandList* cmd,
+                             const DirectX::SimpleMath::Matrix& lightVP,
+                             const DirectX::SimpleMath::Vector3& lightDir);
+
     private:
         // GPU particle record — byte-identical to the HLSL `Particle` struct.
         // Each float3 is paired with a scalar to fill a 16-byte row (avoids
@@ -73,16 +79,24 @@ namespace val_cg {
         uint32_t pendingEmit = 0;         // particles to spawn this frame
         float    lastDt     = 0.f;
 
+        // Shadow-pass constant buffer (matches HLSL ParticleShadowCB).
+        struct ParticleShadowCBData {
+            DirectX::SimpleMath::Matrix lightViewProj;
+            DirectX::XMFLOAT4 lightDir;
+        };
+
         // ---- GPU resources ----
         rhi::GpuShader* csEmit     = nullptr;
         rhi::GpuShader* csSimulate = nullptr;
         rhi::GpuPipeline* drawPipe = nullptr;
+        rhi::GpuPipeline* shadowPipe = nullptr;  // depth-only, light-facing billboards
 
         rhi::GpuBuffer* particleBuffer = nullptr;  // RWStructuredBuffer<Particle> (the "particle list")
         rhi::GpuBuffer* aliveList      = nullptr;  // AppendStructuredBuffer<uint>
         rhi::GpuBuffer* indirectArgs   = nullptr;  // DrawIndexedInstancedIndirect args
         rhi::GpuBuffer* indexBuffer    = nullptr;  // 6 indices: one quad template
         rhi::GpuBuffer* cb             = nullptr;  // ParticleCBData
+        rhi::GpuBuffer* shadowCB       = nullptr;  // ParticleShadowCBData (per cascade)
     };
 
 }
