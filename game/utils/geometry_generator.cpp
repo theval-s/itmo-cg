@@ -149,7 +149,7 @@ namespace val_cg {
         float dx = width  / (cols - 1);
         float dz = depth  / (rows - 1);
 
-        std::vector<DirectX::XMFLOAT3> normals(rows * cols, {0.f, 1.f, 0.f});
+        std::vector<DirectX::XMFLOAT3> normals(rows * cols, {0.f, 0.f, 0.f});
 
         for (int r = 0; r < rows; ++r) {
             for (int c = 0; c < cols; ++c) {
@@ -162,6 +162,22 @@ namespace val_cg {
             }
         }
 
+        // Unnormalized cross product of two triangle edges (b-a)x(c-a), via plain
+        // float math — XMVECTOR has no usable operator- on Windows (it's __m128).
+        auto faceNormal = [&](int a, int b, int c) -> DirectX::XMFLOAT3 {
+            const auto& pa = data.vertices[a].position;
+            const auto& pb = data.vertices[b].position;
+            const auto& pc = data.vertices[c].position;
+            float e1x = pb.x - pa.x, e1y = pb.y - pa.y, e1z = pb.z - pa.z;
+            float e2x = pc.x - pa.x, e2y = pc.y - pa.y, e2z = pc.z - pa.z;
+            return { e1y * e2z - e1z * e2y,
+                     e1z * e2x - e1x * e2z,
+                     e1x * e2y - e1y * e2x };
+        };
+        auto accum = [&](int idx, const DirectX::XMFLOAT3& n) {
+            normals[idx].x += n.x; normals[idx].y += n.y; normals[idx].z += n.z;
+        };
+
         for (int r = 0; r < rows - 1; ++r) {
             for (int c = 0; c < cols - 1; ++c) {
                 int tl = r * cols + c;
@@ -169,32 +185,14 @@ namespace val_cg {
                 int bl = (r + 1) * cols + c;
                 int br = bl + 1;
 
-                auto& vTl = data.vertices[tl].position;
-                auto& vTr = data.vertices[tr].position;
-                auto& vBl = data.vertices[bl].position;
-                auto& vBr = data.vertices[br].position;
+                // Area-weighted (unnormalized) face normals matching the winding below.
+                DirectX::XMFLOAT3 n1 = faceNormal(tl, bl, tr);
+                DirectX::XMFLOAT3 n2 = faceNormal(tr, bl, br);
 
-                DirectX::XMVECTOR t1 = DirectX::XMLoadFloat4(&vBl) - DirectX::XMLoadFloat4(&vTl);
-                DirectX::XMVECTOR t2 = DirectX::XMLoadFloat4(&vTr) - DirectX::XMLoadFloat4(&vTl);
-                DirectX::XMVECTOR n1 = DirectX::XMVector3Cross(t1, t2);
-                n1 = DirectX::XMVector3Normalize(n1);
-
-                DirectX::XMVECTOR t3 = DirectX::XMLoadFloat4(&vBr) - DirectX::XMLoadFloat4(&vTr);
-                DirectX::XMVECTOR t4 = DirectX::XMLoadFloat4(&vBl) - DirectX::XMLoadFloat4(&vTr);
-                DirectX::XMVECTOR n2 = DirectX::XMVector3Cross(t3, t4);
-                n2 = DirectX::XMVector3Normalize(n2);
-
-                DirectX::XMFLOAT3 n1f, n2f;
-                DirectX::XMStoreFloat3(&n1f, n1);
-                DirectX::XMStoreFloat3(&n2f, n2);
-
-                normals[tl].x += n1f.x; normals[tl].y += n1f.y; normals[tl].z += n1f.z;
-                normals[tl].x += n2f.x; normals[tl].y += n2f.y; normals[tl].z += n2f.z;
-                normals[tr].x += n1f.x; normals[tr].y += n1f.y; normals[tr].z += n1f.z;
-                normals[tr].x += n2f.x; normals[tr].y += n2f.y; normals[tr].z += n2f.z;
-                normals[bl].x += n1f.x; normals[bl].y += n1f.y; normals[bl].z += n1f.z;
-                normals[bl].x += n2f.x; normals[bl].y += n2f.y; normals[bl].z += n2f.z;
-                normals[br].x += n2f.x; normals[br].y += n2f.y; normals[br].z += n2f.z;
+                accum(tl, n1);
+                accum(bl, n1); accum(bl, n2);
+                accum(tr, n1); accum(tr, n2);
+                accum(br, n2);
 
                 data.indices.push_back(tl); data.indices.push_back(bl); data.indices.push_back(tr);
                 data.indices.push_back(tr); data.indices.push_back(bl); data.indices.push_back(br);
@@ -202,15 +200,17 @@ namespace val_cg {
         }
 
         for (auto& n : normals) {
-            DirectX::XMVECTOR nv = DirectX::XMLoadFloat3(&n);
-            nv = DirectX::XMVector3Normalize(nv);
-            DirectX::XMStoreFloat3(&n, nv);
+            float len = sqrtf(n.x * n.x + n.y * n.y + n.z * n.z);
+            if (len > 1e-6f) { n.x /= len; n.y /= len; n.z /= len; }
+            else             { n = {0.f, 1.f, 0.f}; }
         }
 
-        // Pack normals into color field (z and w components, since xy are UV)
+        // Pack the horizontal normal components (x, z) into the spare color.zw lanes
+        // (xy hold UV). The shader reconstructs the +Y/up component — valid because
+        // heightmap terrain never overhangs, so normal.y is always >= 0.
         for (int i = 0; i < rows * cols; ++i) {
             data.vertices[i].color.z = normals[i].x;
-            data.vertices[i].color.w = normals[i].y;
+            data.vertices[i].color.w = normals[i].z;
         }
 
         return data;

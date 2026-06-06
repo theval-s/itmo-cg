@@ -44,10 +44,11 @@ GBuf PSMain(PS_IN input) {
     float3 texCol = diffuseTex.Sample(samp, input.uv).rgb;
     o.diffSpec = float4(texCol * matDiffuse.rgb, matSpecular.w / 128.0);
 
-    // Use pre-computed vertex normal (x,y packed, reconstruct z assuming unit length).
+    // Smooth per-vertex normal: horizontal lanes (x,z) are stored in COLOR.zw;
+    // reconstruct the +Y/up lane (heightmap terrain never overhangs, so ny >= 0).
     float nx = input.normal_xy.x;
-    float ny = input.normal_xy.y;
-    float nz = sqrt(max(0.f, 1.f - nx*nx - ny*ny));
+    float nz = input.normal_xy.y;
+    float ny = sqrt(max(0.0, 1.0 - nx*nx - nz*nz));
     float3 N = normalize(float3(nx, ny, nz));
     o.normal = float4(N, 0.f);
     return o;
