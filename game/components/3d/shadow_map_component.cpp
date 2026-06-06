@@ -95,13 +95,23 @@ namespace val_cg {
 
         // Pull the light eye back beyond the cascade so tall casters between the
         // light and the slice still write into the depth map.
-        constexpr float CAM_FAR    = SHADOW_FAR;
         constexpr float backExtend = 50.f;
 
-        float prevSplit = 0.001f;
+        // Recover the camera's true near/far from its projection (LH perspective:
+        // _33 = far/(far-near), _43 = -near*far/(far-near)). The split distances
+        // below are view-space Z, so the sub-frustum interpolation parameter must
+        // be measured against the SAME frustum the corners came from. Using
+        // SHADOW_FAR here instead made every cascade box ~2x too deep, so objects
+        // leaked across cascades and the frustum split looked dishonest.
+        const float a        = camData.projMatrix._33;
+        const float camNear  = -camData.projMatrix._43 / a;
+        const float camFar   = -camData.projMatrix._43 / (a - 1.f);
+        const float invRange = 1.f / (camFar - camNear);
+
+        float prevSplit = camNear;
         for (int c = 0; c < NUM_CASCADES; ++c) {
-            float nearFrac = prevSplit        / CAM_FAR;
-            float farFrac  = cascadeSplits[c] / CAM_FAR;
+            float nearFrac = (prevSplit        - camNear) * invRange;
+            float farFrac  = (cascadeSplits[c] - camNear) * invRange;
 
             Vector3 sub[8];
             for (int i = 0; i < 4; ++i) {
