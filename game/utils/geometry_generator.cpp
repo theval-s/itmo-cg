@@ -149,6 +149,8 @@ namespace val_cg {
         float dx = width  / (cols - 1);
         float dz = depth  / (rows - 1);
 
+        std::vector<DirectX::XMFLOAT3> normals(rows * cols, {0.f, 1.f, 0.f});
+
         for (int r = 0; r < rows; ++r) {
             for (int c = 0; c < cols; ++c) {
                 float h = heights[r * cols + c];
@@ -156,21 +158,59 @@ namespace val_cg {
                 float z = -depth * 0.5f + r * dz;
                 float u = static_cast<float>(c) / (cols - 1);
                 float v = 1.f - static_cast<float>(r) / (rows - 1);
-                // COLOR slot repurposed as UV (xy) for the terrain shader
                 data.vertices.push_back(Vertex({x, h * maxHeight, z, 1.f}, {u, v, 0.f, 1.f}));
             }
         }
 
-        data.indices.reserve((rows - 1) * (cols - 1) * 6);
         for (int r = 0; r < rows - 1; ++r) {
             for (int c = 0; c < cols - 1; ++c) {
                 int tl = r * cols + c;
                 int tr = tl + 1;
                 int bl = (r + 1) * cols + c;
                 int br = bl + 1;
+
+                auto& vTl = data.vertices[tl].position;
+                auto& vTr = data.vertices[tr].position;
+                auto& vBl = data.vertices[bl].position;
+                auto& vBr = data.vertices[br].position;
+
+                DirectX::XMVECTOR t1 = DirectX::XMLoadFloat4(&vBl) - DirectX::XMLoadFloat4(&vTl);
+                DirectX::XMVECTOR t2 = DirectX::XMLoadFloat4(&vTr) - DirectX::XMLoadFloat4(&vTl);
+                DirectX::XMVECTOR n1 = DirectX::XMVector3Cross(t1, t2);
+                n1 = DirectX::XMVector3Normalize(n1);
+
+                DirectX::XMVECTOR t3 = DirectX::XMLoadFloat4(&vBr) - DirectX::XMLoadFloat4(&vTr);
+                DirectX::XMVECTOR t4 = DirectX::XMLoadFloat4(&vBl) - DirectX::XMLoadFloat4(&vTr);
+                DirectX::XMVECTOR n2 = DirectX::XMVector3Cross(t3, t4);
+                n2 = DirectX::XMVector3Normalize(n2);
+
+                DirectX::XMFLOAT3 n1f, n2f;
+                DirectX::XMStoreFloat3(&n1f, n1);
+                DirectX::XMStoreFloat3(&n2f, n2);
+
+                normals[tl].x += n1f.x; normals[tl].y += n1f.y; normals[tl].z += n1f.z;
+                normals[tl].x += n2f.x; normals[tl].y += n2f.y; normals[tl].z += n2f.z;
+                normals[tr].x += n1f.x; normals[tr].y += n1f.y; normals[tr].z += n1f.z;
+                normals[tr].x += n2f.x; normals[tr].y += n2f.y; normals[tr].z += n2f.z;
+                normals[bl].x += n1f.x; normals[bl].y += n1f.y; normals[bl].z += n1f.z;
+                normals[bl].x += n2f.x; normals[bl].y += n2f.y; normals[bl].z += n2f.z;
+                normals[br].x += n2f.x; normals[br].y += n2f.y; normals[br].z += n2f.z;
+
                 data.indices.push_back(tl); data.indices.push_back(bl); data.indices.push_back(tr);
                 data.indices.push_back(tr); data.indices.push_back(bl); data.indices.push_back(br);
             }
+        }
+
+        for (auto& n : normals) {
+            DirectX::XMVECTOR nv = DirectX::XMLoadFloat3(&n);
+            nv = DirectX::XMVector3Normalize(nv);
+            DirectX::XMStoreFloat3(&n, nv);
+        }
+
+        // Pack normals into color field (z and w components, since xy are UV)
+        for (int i = 0; i < rows * cols; ++i) {
+            data.vertices[i].color.z = normals[i].x;
+            data.vertices[i].color.w = normals[i].y;
         }
 
         return data;
