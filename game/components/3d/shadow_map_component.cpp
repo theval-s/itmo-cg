@@ -90,12 +90,13 @@ namespace val_cg {
 
         Vector3 lightDir{light->direction.x, light->direction.y, light->direction.z};
         lightDir.Normalize();
-
-        Vector3 lightPos = lightDir * 100.f;
         Vector3 up = (fabsf(lightDir.y) > 0.99f) ? Vector3{1,0,0} : Vector3{0,1,0};
-        Matrix lightView = Matrix::CreateLookAt(lightPos, Vector3::Zero, up);
 
-        constexpr float CAM_FAR = SHADOW_FAR;
+        // Pull the light eye back beyond the cascade so tall casters between the
+        // light and the slice still write into the depth map.
+        constexpr float CAM_FAR    = SHADOW_FAR;
+        constexpr float backExtend = 50.f;
+
         float prevSplit = 0.001f;
         for (int c = 0; c < NUM_CASCADES; ++c) {
             float nearFrac = prevSplit        / CAM_FAR;
@@ -108,22 +109,35 @@ namespace val_cg {
                 sub[i + 4] = worldCorners[i] + ray * farFrac;
             }
 
-            float minX =  FLT_MAX, maxX = -FLT_MAX;
-            float minY =  FLT_MAX, maxY = -FLT_MAX;
-            float minZ =  FLT_MAX, maxZ = -FLT_MAX;
+            // Fit a bounding SPHERE, not a tight box. A sphere has no preferred
+            // axis, so the ortho extent no longer depends on how the camera is
+            // oriented -> the shadow map stops skewing/stretching when the camera
+            // tilts down toward the terrain.
+            Vector3 center = Vector3::Zero;
+            for (auto& sc : sub) center += sc;
+            center /= 8.f;
 
-            for (auto& sc : sub) {
-                Vector4 lc = Vector4::Transform(Vector4{sc.x, sc.y, sc.z, 1.f}, lightView);
-                minX = min(minX, lc.x); maxX = max(maxX, lc.x);
-                minY = min(minY, lc.y); maxY = max(maxY, lc.y);
-                minZ = min(minZ, lc.z); maxZ = max(maxZ, lc.z);
-            }
+            float radius = 0.f;
+            for (auto& sc : sub) radius = max(radius, (sc - center).Length());
+            // Quantize the radius so it doesn't wobble frame to frame.
+            radius = ceilf(radius * 16.f) / 16.f;
 
-            constexpr float zSlack = 20.f;
+            Vector3 eye = center + lightDir * (radius + backExtend);
+            Matrix lightView = Matrix::CreateLookAt(eye, center, up);
+
+            // Square, symmetric ortho box -> square texels.
             Matrix lightProj = Matrix::CreateOrthographicOffCenter(
-                minX, maxX, minY, maxY, -maxZ - zSlack, -minZ + zSlack);
+                -radius, radius, -radius, radius, 0.f, 2.f * radius + backExtend);
 
             lightVP[c] = lightView * lightProj;
+
+            // Texel snapping: round the world origin's projected position to whole
+            // shadow texels so the map doesn't crawl as the camera moves.
+            Vector4 originLS = Vector4::Transform(Vector4{0, 0, 0, 1}, lightVP[c]);
+            float halfSize = SHADOW_MAP_SIZE * 0.5f;
+            lightVP[c]._41 += (roundf(originLS.x * halfSize) / halfSize) - originLS.x;
+            lightVP[c]._42 += (roundf(originLS.y * halfSize) / halfSize) - originLS.y;
+
             prevSplit = cascadeSplits[c];
         }
     }
