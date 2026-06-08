@@ -97,14 +97,15 @@ namespace val_cg {
         // light and the slice still write into the depth map.
         constexpr float backExtend = 50.f;
 
-        // View-space depth of the near/far frustum planes, read straight off the
-        // corners we already have (handedness-agnostic — no need to decode the
-        // projection matrix). The split distances below are in this same view-Z
-        // space, so the slice fraction is linear between near and far. Slicing
-        // against SHADOW_FAR instead made every cascade box ~2x too deep, so
-        // objects leaked across cascades and the frustum split looked dishonest.
-        const float camNear  = fabsf(Vector3::Transform(worldCorners[0], camData.viewMatrix).z);
-        const float camFar   = fabsf(Vector3::Transform(worldCorners[4], camData.viewMatrix).z);
+        // Recover the camera's true near/far from its projection (LH perspective:
+        // _33 = far/(far-near), _43 = -near*far/(far-near)). The split distances
+        // below are view-space Z, so the sub-frustum interpolation parameter must
+        // be measured against the SAME frustum the corners came from. Using
+        // SHADOW_FAR here instead made every cascade box ~2x too deep, so objects
+        // leaked across cascades and the frustum split looked dishonest.
+        const float a        = camData.projMatrix._33;
+        const float camNear  = -camData.projMatrix._43 / a;
+        const float camFar   = -camData.projMatrix._43 / (a - 1.f);
         const float invRange = 1.f / (camFar - camNear);
 
         float prevSplit = camNear;
