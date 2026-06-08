@@ -1,10 +1,10 @@
 // GPU picking compute shader.
-// Reads the G-buffer at the clicked pixel, reconstructs world position from depth,
-// and writes {id, worldPos, normal} into a single-element RWStructuredBuffer that
-// the CPU reads back to report what was clicked.
+// Reads the G-buffer at the clicked pixel,
+// writes {id, worldPos, normal} into a single-element RWStructuredBuffer
+
 
 cbuffer PickCB : register(b0) {
-    matrix invViewProj;   // (view*proj).Invert().Transpose() — same as lighting pass
+    matrix invViewProj;
     uint   clickX;        // click pixel, client-space
     uint   clickY;
     float  screenW;
@@ -30,14 +30,13 @@ void CSMain(uint3 dtid : SV_DispatchThreadID) {
     uint  id    = (uint)(IdTex.Load(px) + 0.5);
     float3 N    = NormalTex.Load(px).xyz;
 
-    // Reconstruct world position (row-vector convention, matches LightingShader).
     float2 uv     = (float2(px.xy) + 0.5) / float2(screenW, screenH);
     float4 ndc    = float4(uv * float2(2, -2) + float2(-1, 1), depth, 1);
     float4 worldH = mul(ndc, invViewProj);
     float3 wp     = worldH.xyz / worldH.w;
 
     PickResult r;
-    r.id = (depth >= 1.0) ? 0u : id;   // background → 0
+    r.id = (depth >= 1.0) ? 0u : id;
     r.wx = wp.x; r.wy = wp.y; r.wz = wp.z;
     r.nx = N.x;  r.ny = N.y;  r.nz = N.z;
     Result[0] = r;
