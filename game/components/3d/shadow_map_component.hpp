@@ -1,5 +1,5 @@
 #pragma once
-#include <SimpleMath.h>
+#include "math.hpp"
 #include "game_component.hpp"
 #include "common_structs.h"
 #include "rhi/graphics_device.hpp"
@@ -30,7 +30,7 @@ namespace val_cg {
         void BindForDraw(rhi::CommandList* cmd) const;
 
         // Getters for deferred lighting pass.
-        const DirectX::SimpleMath::Matrix* GetLightVPs() const { return lightVP; }
+        const math::Matrix* GetLightVPs() const { return lightVP; }
         const float* GetCascadeSplits() const { return cascadeSplits; }
         rhi::GpuSampler* GetShadowSampler() const { return shadowSampler; }
         rhi::GpuTexture* GetShadowTexture(int cascade) const { return shadowTex[cascade]; }
@@ -47,7 +47,7 @@ namespace val_cg {
         rhi::GpuDepthTarget* shadowDepth[NUM_CASCADES] = {};
         rhi::GpuTexture*     shadowTex  [NUM_CASCADES] = {};
 
-        DirectX::SimpleMath::Matrix lightVP[NUM_CASCADES];
+        math::Matrix lightVP[NUM_CASCADES];
         float cascadeSplits[NUM_CASCADES] = {};  // view-space Z end planes
 
         // Depth-pass resources

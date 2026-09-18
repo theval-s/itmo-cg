@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <directxmath.h>
+#include "math.hpp"
 #include <span>
 #include <vector>
 
@@ -24,11 +24,11 @@ namespace val_cg
         rhi::GpuPipeline* pipeline = nullptr;
         rhi::GpuBuffer*   vb        = nullptr;
         rhi::GpuBuffer*   ib        = nullptr;
-        std::vector<DirectX::XMFLOAT4> points;
+        std::vector<math::Float4> points;
         std::vector<int> indices;
     public:
         ///@param inputPoints vertices in format (xmfloat4)Position (xmfloat4)Color
-        explicit TriangleComponent(Game* game, std::span<const DirectX::XMFLOAT4> inputPoints = {}, std::span<const int> inputIndices = {});
+        explicit TriangleComponent(Game* game, std::span<const math::Float4> inputPoints = {}, std::span<const int> inputIndices = {});
 
         void Initialize() override;
         void Draw() override;

@@ -10,16 +10,16 @@
 #include <iostream>
 
 namespace val_cg {
-    using namespace DirectX::SimpleMath;
+    using namespace val_cg::math;
 
     ModelComponent::ModelComponent(Game* game, const std::string& filePath,
-                                   Vector3 position, float scale, DirectX::XMFLOAT4 color)
+                                   Vector3 position, float scale, math::Float4 color)
         : MeshComponent(game), worldPos(position), scaleVal(scale)
     {
         LoadMesh(filePath, color);
     }
 
-    void ModelComponent::LoadMesh(const std::string& filePath, DirectX::XMFLOAT4 color) {
+    void ModelComponent::LoadMesh(const std::string& filePath, math::Float4 color) {
         modelFilePath = filePath;
         Assimp::Importer importer;
         const aiScene* scene = importer.ReadFile(filePath,
@@ -44,7 +44,7 @@ namespace val_cg {
         meshUVs.clear();
         meshNormals.clear();
 
-        std::vector<DirectX::XMFLOAT3> allPositions;
+        std::vector<math::Float3> allPositions;
         int vertexOffset = 0;
 
         for (unsigned int m = 0; m < scene->mNumMeshes; ++m) {
@@ -81,9 +81,9 @@ namespace val_cg {
         }
 
         if (!allPositions.empty()) {
-            DirectX::BoundingSphere::CreateFromPoints(
+            math::BoundingSphere::CreateFromPoints(
                 collider, allPositions.size(),
-                allPositions.data(), sizeof(DirectX::XMFLOAT3));
+                allPositions.data(), sizeof(math::Float3));
             baseBoundingRadius = collider.Radius;
         }
     }
@@ -97,7 +97,7 @@ namespace val_cg {
     void ModelComponent::Update(float deltaTime) {
         if (attachPoint && attachRotation) {
             worldPos = *attachPoint +
-                DirectX::SimpleMath::Vector3::TransformNormal(attachOffset, *attachRotation);
+                math::Vector3::TransformNormal(attachOffset, *attachRotation);
             worldMatrix =
                 Matrix::CreateScale(scaleVal) *
                 (attachRotationOffset * (*attachRotation)) *

@@ -7,7 +7,7 @@
 #include <iostream>
 
 namespace val_cg {
-    using namespace DirectX::SimpleMath;
+    using namespace val_cg::math;
 
     LitModelComponent::LitModelComponent(Game* game,
                                          const std::string& filePath,
@@ -40,7 +40,7 @@ namespace val_cg {
             pv.position = points[i * 2];
             const auto& n = (i < static_cast<int>(meshNormals.size()))
                             ? meshNormals[i]
-                            : DirectX::XMFLOAT3{0.f, 1.f, 0.f};
+                            : math::Float3{0.f, 1.f, 0.f};
             pv.normal = {n.x, n.y, n.z, 0.f};
             phongVerts.push_back(pv);
         }

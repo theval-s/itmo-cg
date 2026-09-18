@@ -10,29 +10,30 @@
 #include "utils/geometry_generator.hpp"
 #include <wincodec.h>
 #include <iostream>
+#include <filesystem>
 #include "Keys.h"
 #include <cmath>
 #include <algorithm>
 
 namespace val_cg {
-    using namespace DirectX::SimpleMath;
+    using namespace val_cg::math;
 
     // ---- TerrainComponent ----
 
     TerrainComponent::TerrainComponent(Game* game,
-        const wchar_t* heightMapPath, const wchar_t* diffusePath,
+        const char* heightMapPath, const char* diffusePath,
         float width, float depth, float maxHeight)
         : MeshComponent(game), rows_(64), cols_(64),
           width_(width), depth_(depth), maxHeight_(maxHeight),
-          diffusePath_(diffusePath ? diffusePath : L"")
+          diffusePath_(diffusePath ? diffusePath : "")
     {
         if (heightMapPath)
             heights_ = TryLoadFromFile(heightMapPath, rows_, cols_);
         if (heights_.empty()) {
-            std::wcerr << L"[Terrain] WARNING: using flat fallback — check that heightmap exists at the given path\n";
+            std::cerr << "[Terrain] WARNING: using flat fallback — check that heightmap exists at the given path\n";
             heights_.assign(rows_ * cols_, 0.f);
         } else {
-            std::wcout << L"[Terrain] loaded " << cols_ << L"x" << rows_ << L" heightmap\n";
+            std::cout << "[Terrain] loaded " << cols_ << "x" << rows_ << " heightmap\n";
         }
 
         MeshData mesh = GeometryGenerator::CreateTerrain(rows_, cols_, width_, depth_, heights_, maxHeight_);
@@ -58,7 +59,7 @@ namespace val_cg {
         pd.raster.cull = rhi::CullMode::None;
         pipeline = dev->CreatePipeline(pd);
 
-        vb = dev->CreateBuffer({rhi::BufferType::Vertex, sizeof(DirectX::XMFLOAT4) * points.size()}, points.data());
+        vb = dev->CreateBuffer({rhi::BufferType::Vertex, sizeof(math::Float4) * points.size()}, points.data());
         ib = dev->CreateBuffer({rhi::BufferType::Index,  sizeof(int) * indices.size()},            indices.data());
         constantBuffer = dev->CreateBuffer({rhi::BufferType::Constant, sizeof(TerrainCBData), /*dynamic*/true});
 
@@ -127,7 +128,9 @@ namespace val_cg {
         return baseY + h * maxHeight_;
     }
 
-    std::vector<float> TerrainComponent::TryLoadFromFile(const wchar_t* path, int& outRows, int& outCols) {
+    std::vector<float> TerrainComponent::TryLoadFromFile(const char* path, int& outRows, int& outCols) {
+        // TODO: crossplatform — WIC decode; see METAL_PORT.md B.3 for the stb_image replacement.
+        const std::wstring widePath = std::filesystem::path(path).wstring();
         HRESULT coHr = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
         if (FAILED(coHr) && coHr != RPC_E_CHANGED_MODE)
             return {};
@@ -138,10 +141,10 @@ namespace val_cg {
             return {};
 
         IWICBitmapDecoder* decoder = nullptr;
-        if (FAILED(factory->CreateDecoderFromFilename(path, nullptr, GENERIC_READ,
+        if (FAILED(factory->CreateDecoderFromFilename(widePath.c_str(), nullptr, GENERIC_READ,
                 WICDecodeMetadataCacheOnDemand, &decoder))) {
             factory->Release();
-            std::wcerr << L"[TerrainComponent] height map not found: " << path << L" — using procedural\n";
+            std::cerr << "[TerrainComponent] height map not found: " << path << " — using procedural\n";
             return {};
         }
 
@@ -177,8 +180,8 @@ namespace val_cg {
         std::vector<float> h(rows * cols);
         for (int r = 0; r < rows; ++r) {
             for (int c = 0; c < cols; ++c) {
-                float u = static_cast<float>(c) / (cols-1) * DirectX::XM_2PI * 2;
-                float v = static_cast<float>(r) / (rows-1) * DirectX::XM_2PI * 2;
+                float u = static_cast<float>(c) / (cols-1) * math::TWO_PI * 2;
+                float v = static_cast<float>(r) / (rows-1) * math::TWO_PI * 2;
                 float val = 0.50f * sinf(u * 0.80f) * cosf(v * 0.60f)
                           + 0.25f * sinf(u * 2.10f + 1.0f) * cosf(v * 1.70f)
                           + 0.15f * sinf(u * 3.50f) * sinf(v * 3.20f + 0.5f);
@@ -237,7 +240,7 @@ namespace val_cg {
         cbData.matDiffuse  = {1.0f, 1.0f, 1.0f, 0.f};
         cbData.matSpecular = {0.08f, 0.08f, 0.08f, 12.f};
 
-        srv_     = dev->CreateTextureFromFile(L"./textures/cobblestone.png");
+        srv_     = dev->CreateTextureFromFile("./textures/cobblestone.png");
         sampler_ = dev->CreateSampler({rhi::Filter::Linear, rhi::AddressMode::Wrap});
 
         rollRotation = Quaternion::Identity;

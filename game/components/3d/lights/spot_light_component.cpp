@@ -2,14 +2,14 @@
 #include <cmath>
 
 namespace val_cg {
-    using namespace DirectX::SimpleMath;
+    using namespace val_cg::math;
 
     SpotLightComponent::SpotLightComponent(Game* game,
                                            Vector3 position,
                                            Vector3 direction,
                                            float innerAngleDeg,
                                            float outerAngleDeg,
-                                           DirectX::XMFLOAT3 color,
+                                           math::Float3 color,
                                            float attenConst,
                                            float attenLinear,
                                            float attenQuad)
@@ -25,11 +25,11 @@ namespace val_cg {
     {}
 
     float SpotLightComponent::InnerCos() const {
-        return std::cosf(innerAngleDeg * DirectX::XM_PI / 180.f);
+        return std::cosf(innerAngleDeg * math::PI / 180.f);
     }
 
     float SpotLightComponent::OuterCos() const {
-        return std::cosf(outerAngleDeg * DirectX::XM_PI / 180.f);
+        return std::cosf(outerAngleDeg * math::PI / 180.f);
     }
 
     LightData SpotLightComponent::GetLightData() const {

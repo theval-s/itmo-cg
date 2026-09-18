@@ -7,7 +7,7 @@
 #include "consts.hpp"
 
 namespace val_cg {
-    MeshComponent::MeshComponent(Game *game, std::span<const DirectX::XMFLOAT4> inputPoints,
+    MeshComponent::MeshComponent(Game *game, std::span<const math::Float4> inputPoints,
         std::span<const int> inputIndices)
             : TriangleComponent(game, inputPoints, inputIndices) {
     }
@@ -26,7 +26,7 @@ namespace val_cg {
         pd.topology    = topology;   // planets/orbits override this (line list)
         pipeline = dev->CreatePipeline(pd);
 
-        vb = dev->CreateBuffer({rhi::BufferType::Vertex, sizeof(DirectX::XMFLOAT4) * points.size()}, points.data());
+        vb = dev->CreateBuffer({rhi::BufferType::Vertex, sizeof(math::Float4) * points.size()}, points.data());
         ib = dev->CreateBuffer({rhi::BufferType::Index,  sizeof(int) * indices.size()},            indices.data());
         constantBuffer = dev->CreateBuffer({rhi::BufferType::Constant, sizeof(WorldViewProjData), /*dynamic*/true});
     }

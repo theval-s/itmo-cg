@@ -29,7 +29,7 @@ class LitMeshComponent : virtual public MeshComponent {
         void InitLitBuffers();
 
         // Fills phongCB from current game state (lights, camera, world matrix) and binds to b0.
-        void BindPhongCB(const DirectX::SimpleMath::Matrix& worldMat);
+        void BindPhongCB(const math::Matrix& worldMat);
 
         // Binds shadow resources (b1, t0-t2, s0). Falls back to disabled CB if no shadow manager.
         void BindShadow();

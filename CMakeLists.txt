@@ -33,37 +33,48 @@ add_executable(itmo_cg main.cpp
         game/rendering/gbuffer.cpp
         game/rendering/rendering_system.cpp
         external/Delegates.cpp
-        # Windowing + input are platform-specific
-        # needs to be fixed later
-        game/platforms/display_win32.cpp
-        external/InputDevice.cpp
+        external/InputDevice.cpp          # platform-neutral key/mouse state; fed by the Display
 )
 
 target_include_directories(itmo_cg PRIVATE external game)
 
-# ---- Graphics backend selection (the RHI seam) ----
+# ---- Platform + graphics backend selection (the RHI seam) ----
+# Each platform provides a Display (game/platforms/) and a GraphicsDevice (game/rhi/<api>/).
 if(WIN32)
     target_sources(itmo_cg PRIVATE
+            game/platforms/display_win32.cpp
             game/rhi/d3d11/d3d11_device.cpp
             game/rhi/d3d11/d3d11_command_list.cpp
             game/rhi/d3d11/d3d11_state_cache.cpp
     )
     target_link_libraries(itmo_cg d3d11 dxgi d3dcompiler)
 elseif(APPLE)
-    # PLACEHOLDER
-    #   target_sources(itmo_cg PRIVATE game/rhi/metal/metal_device.mm
-    #                                  game/rhi/metal/metal_command_list.mm ...)
+    # PLACEHOLDER — see METAL_PORT.md phase B.1
+    #   target_sources(itmo_cg PRIVATE game/platforms/display_mac.mm
+    #                                  game/rhi/metal/metal_device.cpp
+    #                                  game/rhi/metal/metal_command_list.cpp ...)
     #   target_link_libraries(itmo_cg "-framework Metal" "-framework QuartzCore"
     #                                 "-framework AppKit")
-    # (Also: macOS windowing/input + a cross-platform math lib to replace SimpleMath.)
     message(FATAL_ERROR "macOS/Metal not implemented yet")
 else()
     message(FATAL_ERROR "No support")
 endif()
 
-# DirectXTK (SimpleMath math types + WICTextureLoader in the D3D11 backend) and
-# Assimp (model loading) come from vcpkg.
-find_package(directxtk CONFIG REQUIRED)
+# ---- Math ----
+# The engine's math is DirectXMath + DirectXTK SimpleMath (see game/math.hpp).
+# Windows: both come with the vcpkg `directxtk` package (also used for WICTextureLoader
+# in the D3D11 backend). macOS: DirectXMath from the vcpkg `directxmath` port (portable,
+# NEON on arm64) and SimpleMath vendored in external/SimpleMath (no DirectXTK port exists).
+if(WIN32)
+    find_package(directxtk CONFIG REQUIRED)
+    target_link_libraries(itmo_cg Microsoft::DirectXTK)
+else()
+    find_package(directxmath CONFIG REQUIRED)
+    target_link_libraries(itmo_cg Microsoft::DirectXMath)
+    target_sources(itmo_cg PRIVATE external/SimpleMath/SimpleMath.cpp)
+    target_include_directories(itmo_cg PRIVATE external/SimpleMath)
+endif()
+
+# Assimp (model loading) comes from vcpkg on every platform.
 find_package(assimp CONFIG REQUIRED)
 target_link_libraries(itmo_cg assimp::assimp)
-target_link_libraries(itmo_cg Microsoft::DirectXTK)

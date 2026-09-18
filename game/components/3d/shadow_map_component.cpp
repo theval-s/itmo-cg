@@ -9,7 +9,7 @@
 #include <cmath>
 
 namespace val_cg {
-    using namespace DirectX::SimpleMath;
+    using namespace val_cg::math;
 
     ShadowMapComponent::ShadowMapComponent(Game* game, DirectionalLightComponent* light)
         : GameComponent(game), light(light)
@@ -40,6 +40,7 @@ namespace val_cg {
         pd.depth.depthTest  = true;
         pd.depth.depthWrite = true;
         pd.depth.func       = rhi::CompareFunc::LessEqual;
+        pd.numColorTargets  = 0;   // depth-only
         shadowPipeline = dev->CreatePipeline(pd);
 
         depthPassCB    = dev->CreateBuffer({rhi::BufferType::Constant, sizeof(Matrix),       /*dynamic*/true});
@@ -76,7 +77,7 @@ namespace val_cg {
         auto camData = game->GetCameraData();
         Matrix invVP = (camData.viewMatrix * camData.projMatrix).Invert();
 
-        static const DirectX::XMFLOAT3 ndc[8] = {
+        static const math::Float3 ndc[8] = {
             {-1,-1, 0}, {1,-1, 0}, {-1, 1, 0}, {1, 1, 0},
             {-1,-1, 1}, {1,-1, 1}, {-1, 1, 1}, {1, 1, 1},
         };

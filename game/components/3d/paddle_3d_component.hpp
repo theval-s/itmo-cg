@@ -3,16 +3,15 @@
 //
 
 #pragma once
+#include "math.hpp"
 #include "mesh_component.hpp"
-#include "SimpleMath.h"
-#include "DirectXCollision.h"
 
 namespace val_cg {
     class Paddle3DComponent : public MeshComponent {
     public:
         enum Alignment { Left, Right };
 
-        DirectX::BoundingBox collider;
+        math::BoundingBox collider;
 
         Paddle3DComponent(Game *game, Alignment alignment);
 
@@ -22,7 +21,7 @@ namespace val_cg {
 
     private:
         Alignment alignment;
-        DirectX::SimpleMath::Vector3 position;
+        math::Vector3 position;
 
         static constexpr float speed = 3.0f;
         static constexpr float halfH = 1.0f;

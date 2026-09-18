@@ -6,27 +6,27 @@
 #include <string_view>
 
 namespace val_cg {
-    constexpr wchar_t VERTEX_SHADER_PATH[] = L"./shaders/MyVeryFirstShader.hlsl";
-    constexpr wchar_t PIXEL_SHADER_PATH[] = L"./shaders/MyVeryFirstShader.hlsl";
-    constexpr wchar_t PADDLE_SHADER_PATH[]=L"./shaders/PaddleShader.hlsl";
-    constexpr wchar_t BALL_SHADER_PATH[]=L"./shaders/BallShader.hlsl";
-    constexpr wchar_t SPHERE_SHADER_PATH[]=L"./shaders/SphereWithCamera.hlsl";
-    constexpr wchar_t TEXTURED_SHADER_PATH[]=L"./shaders/TexturedShader.hlsl";
-    constexpr wchar_t SIMPLE_TEXTURED_SHADER_PATH[]=L"./shaders/MegaSimpleTextureShader.hlsl";
-    constexpr wchar_t PHONG_SHADER_PATH[]           =L"./shaders/PhongShader.hlsl";
-    constexpr wchar_t TERRAIN_SHADER_PATH[]         =L"./shaders/TerrainShader.hlsl";
-    constexpr wchar_t SHADOW_DEPTH_SHADER_PATH[]    =L"./shaders/ShadowDepth.hlsl";
-    constexpr wchar_t DEBUG_SHADER_PATH[]           =L"./shaders/DebugQuad.hlsl";
+    constexpr char VERTEX_SHADER_PATH[] = "./shaders/MyVeryFirstShader.hlsl";
+    constexpr char PIXEL_SHADER_PATH[] = "./shaders/MyVeryFirstShader.hlsl";
+    constexpr char PADDLE_SHADER_PATH[]= "./shaders/PaddleShader.hlsl";
+    constexpr char BALL_SHADER_PATH[]= "./shaders/BallShader.hlsl";
+    constexpr char SPHERE_SHADER_PATH[]= "./shaders/SphereWithCamera.hlsl";
+    constexpr char TEXTURED_SHADER_PATH[]= "./shaders/TexturedShader.hlsl";
+    constexpr char SIMPLE_TEXTURED_SHADER_PATH[]= "./shaders/MegaSimpleTextureShader.hlsl";
+    constexpr char PHONG_SHADER_PATH[]           = "./shaders/PhongShader.hlsl";
+    constexpr char TERRAIN_SHADER_PATH[]         = "./shaders/TerrainShader.hlsl";
+    constexpr char SHADOW_DEPTH_SHADER_PATH[]    = "./shaders/ShadowDepth.hlsl";
+    constexpr char DEBUG_SHADER_PATH[]           = "./shaders/DebugQuad.hlsl";
 
     // Deferred rendering shaders
-    constexpr wchar_t GBUFFER_SHADER_PATH[]          = L"./shaders/GBufferShader.hlsl";
-    constexpr wchar_t GBUFFER_TEXTURED_SHADER_PATH[] = L"./shaders/GBufferTexturedShader.hlsl";
-    constexpr wchar_t GBUFFER_TERRAIN_SHADER_PATH[]  = L"./shaders/GBufferTerrainShader.hlsl";
-    constexpr wchar_t LIGHTING_SHADER_PATH[]         = L"./shaders/LightingShader.hlsl";
+    constexpr char GBUFFER_SHADER_PATH[]          = "./shaders/GBufferShader.hlsl";
+    constexpr char GBUFFER_TEXTURED_SHADER_PATH[] = "./shaders/GBufferTexturedShader.hlsl";
+    constexpr char GBUFFER_TERRAIN_SHADER_PATH[]  = "./shaders/GBufferTerrainShader.hlsl";
+    constexpr char LIGHTING_SHADER_PATH[]         = "./shaders/LightingShader.hlsl";
 
     // Particle system
-    constexpr wchar_t PARTICLE_SHADER_PATH[]         = L"./shaders/ParticleShader.hlsl";
+    constexpr char PARTICLE_SHADER_PATH[]         = "./shaders/ParticleShader.hlsl";
 
     // GPU picking compute shader
-    constexpr wchar_t PICK_SHADER_PATH[]             = L"./shaders/PickShader.hlsl";
+    constexpr char PICK_SHADER_PATH[]             = "./shaders/PickShader.hlsl";
 }

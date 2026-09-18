@@ -9,17 +9,17 @@
 #include "utils/geometry_generator.hpp"
 
 namespace val_cg {
-    using namespace DirectX::SimpleMath;
+    using namespace val_cg::math;
 
     Paddle3DComponent::Paddle3DComponent(Game *game, Alignment al)
         : MeshComponent(game), alignment(al) {
         float x = (alignment == Left) ? -4.5f : 4.5f;
         position = Vector3(x, 0.f, 0.f);
-        DirectX::XMFLOAT4 color = (alignment == Left)
-                                      ? DirectX::XMFLOAT4(1.f, 0.2f, 0.2f, 1.f)
-                                      : DirectX::XMFLOAT4(0.2f, 0.2f, 1.f, 1.f);
+        math::Float4 color = (alignment == Left)
+                                      ? math::Float4(1.f, 0.2f, 0.2f, 1.f)
+                                      : math::Float4(0.2f, 0.2f, 1.f, 1.f);
         MeshData mesh = GeometryGenerator::CreateBox(halfD, halfH, halfD, color);
-        std::vector<DirectX::XMFLOAT4> tempPoints;
+        std::vector<math::Float4> tempPoints;
         tempPoints.reserve(mesh.vertices.size()*2);
         for (const auto& v : mesh.vertices) {
             tempPoints.push_back(v.position);

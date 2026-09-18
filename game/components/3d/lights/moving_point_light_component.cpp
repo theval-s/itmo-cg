@@ -4,14 +4,14 @@
 #include "utils/geometry_generator.hpp"
 
 namespace val_cg {
-    using namespace DirectX::SimpleMath;
+    using namespace val_cg::math;
 
     MovingPointLightComponent::MovingPointLightComponent(
         Game* game,
-        DirectX::SimpleMath::Vector3 position,
-        DirectX::SimpleMath::Vector3 direction,
+        math::Vector3 position,
+        math::Vector3 direction,
         float speed, float lifetime,
-        DirectX::XMFLOAT3 color,
+        math::Float3 color,
         float attenConst, float attenLinear, float attenQuad)
         : LightComponent(game)
         , position(position)
@@ -29,7 +29,7 @@ namespace val_cg {
         // Wire-sphere debug mesh in the light's colour.
         MeshData mesh = GeometryGenerator::CreateSphereLineList(
             0.3f, 8, 8, {color.x, color.y, color.z, 1.f});
-        std::vector<DirectX::XMFLOAT4> pts;
+        std::vector<math::Float4> pts;
         pts.reserve(mesh.vertices.size() * 2);
         for (const auto& v : mesh.vertices) {
             pts.push_back(v.position);
@@ -48,7 +48,7 @@ namespace val_cg {
         pd.topology    = rhi::PrimitiveTopology::LineList;
         pipeline = dev->CreatePipeline(pd);
 
-        vb = dev->CreateBuffer({rhi::BufferType::Vertex, sizeof(DirectX::XMFLOAT4) * pts.size()}, pts.data());
+        vb = dev->CreateBuffer({rhi::BufferType::Vertex, sizeof(math::Float4) * pts.size()}, pts.data());
         ib = dev->CreateBuffer({rhi::BufferType::Index,  sizeof(int) * mesh.indices.size()},     mesh.indices.data());
         cb = dev->CreateBuffer({rhi::BufferType::Constant, sizeof(WorldViewProjData), /*dynamic*/true});
     }

@@ -9,7 +9,7 @@
 #include "consts.hpp"
 
 namespace val_cg {
-    using namespace DirectX::SimpleMath;
+    using namespace val_cg::math;
 
     namespace {
         constexpr unsigned THREADS = 64;

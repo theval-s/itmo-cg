@@ -2,21 +2,21 @@
 // Created by Val on 23.03.2026.
 //
 
+#include "math.hpp"
 #include "camera_component.hpp"
 
 #include <iostream>
-#include <SimpleMath.h>
 #include <algorithm>
 
 #include "game.hpp"
 
-using namespace DirectX::SimpleMath;
+using namespace val_cg::math;
 
 val_cg::CameraComponent::CameraComponent(Game *game): GameComponent(game) {
     cameraRotation = Vector3(0.f, 0.f, 0.f);
     cameraPosition = Vector3(0.f, 0.f, 0.f);
     float aspect = static_cast<float>(game->GetWidth()) / game->GetHeight();
-    projMatrix = Matrix::CreatePerspectiveFieldOfView(DirectX::XM_PIDIV2, aspect, 0.001f, 100.0f);
+    projMatrix = Matrix::CreatePerspectiveFieldOfView(math::PI_DIV2, aspect, 0.001f, 100.0f);
 }
 
 void val_cg::CameraComponent::SetPosition(const Vector3 &position) {
@@ -85,6 +85,6 @@ void val_cg::CameraComponent::OnMouseMove(const InputDevice::MouseMoveEventArgs 
     //yes, y-x and x-y is right
     cameraRotation.y -= args.Offset.x * mouseSpeed;
     cameraRotation.x = std::clamp(cameraRotation.x - args.Offset.y * mouseSpeed,
-                                  -DirectX::XM_PIDIV2 + 0.01f,
-                                   DirectX::XM_PIDIV2 - 0.01f);
+                                  -math::PI_DIV2 + 0.01f,
+                                   math::PI_DIV2 - 0.01f);
 }

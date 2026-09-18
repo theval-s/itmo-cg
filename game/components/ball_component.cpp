@@ -2,19 +2,19 @@
 // Created by Val on 22.03.2026.
 //
 
+#include "math.hpp"
 #include "ball_component.hpp"
 
 #include <iostream>
 #include "game.hpp"
-#include "directxmath.h"
 #include "consts.hpp"
 #include "paddle_component.hpp"
 
-constexpr DirectX::XMFLOAT4 ball_polys[8] = {
-    DirectX::XMFLOAT4(0.05f, 0.05f, 0.5f, 1.0f), DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f),
-    DirectX::XMFLOAT4(-0.05f, -0.05f, 0.5f, 1.0f), DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f),
-    DirectX::XMFLOAT4(0.05f, -0.05f, 0.5f, 1.0f), DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f),
-    DirectX::XMFLOAT4(-0.05f, 0.05f, 0.5f, 1.0f), DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f),
+constexpr val_cg::math::Float4 ball_polys[8] = {
+    val_cg::math::Float4(0.05f, 0.05f, 0.5f, 1.0f), val_cg::math::Float4(1.0f, 0.0f, 0.0f, 1.0f),
+    val_cg::math::Float4(-0.05f, -0.05f, 0.5f, 1.0f), val_cg::math::Float4(0.0f, 0.0f, 1.0f, 1.0f),
+    val_cg::math::Float4(0.05f, -0.05f, 0.5f, 1.0f), val_cg::math::Float4(0.0f, 1.0f, 0.0f, 1.0f),
+    val_cg::math::Float4(-0.05f, 0.05f, 0.5f, 1.0f), val_cg::math::Float4(1.0f, 1.0f, 1.0f, 1.0f),
 };
 constexpr int ball_indices[6] = {0, 1, 2, 1, 0, 3};
 
@@ -37,7 +37,7 @@ void val_cg::BallComponent::Initialize() {
     pipeline = dev->CreatePipeline(pd);
 
     constantBuffer = dev->CreateBuffer({rhi::BufferType::Constant, sizeof(BallBuffer), /*dynamic*/true});
-    vb = dev->CreateBuffer({rhi::BufferType::Vertex, sizeof(DirectX::XMFLOAT4) * points.size()}, points.data());
+    vb = dev->CreateBuffer({rhi::BufferType::Vertex, sizeof(val_cg::math::Float4) * points.size()}, points.data());
     ib = dev->CreateBuffer({rhi::BufferType::Index,  sizeof(int) * indices.size()},            indices.data());
 
     collider.Center.x=0;
@@ -71,7 +71,7 @@ void val_cg::BallComponent::Update(float deltaTime) {
     for (const auto& component : game->Components) {
         if (auto paddle = dynamic_cast<PaddleComponent*>(component)) {
             if (collider.Intersects(paddle->collider)) {
-                DirectX::SimpleMath::Vector2 v(collider.Center.x - paddle->collider.Center.x,
+                val_cg::math::Vector2 v(collider.Center.x - paddle->collider.Center.x,
                                                 collider.Center.y - paddle->collider.Center.y);
                 v.Normalize();
                 v1 = v.x;

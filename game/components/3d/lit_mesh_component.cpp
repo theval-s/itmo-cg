@@ -4,7 +4,7 @@
 #include "game.hpp"
 
 namespace val_cg {
-    using namespace DirectX::SimpleMath;
+    using namespace val_cg::math;
 
     LitMeshComponent::LitMeshComponent(Game* game) : MeshComponent(game) {}
 

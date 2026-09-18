@@ -8,10 +8,23 @@
 namespace val_cg {
     class GBuffer {
     public:
+        // Target formats, in RT order. Single source of truth for both the texture
+        // creation below and the geometry-pass PipelineDesc (Metal needs them at PSO time).
+        static constexpr int NUM_TARGETS = 3;
+        static constexpr rhi::TextureFormat FORMATS[NUM_TARGETS] = {
+            rhi::TextureFormat::RGBA8_UNORM,    // RT0: diffuse rgb + packed shininess
+            rhi::TextureFormat::RGBA16_FLOAT,   // RT1: world-space normal
+            rhi::TextureFormat::R32_FLOAT,      // RT2: per-object id (0 = background)
+        };
+        static void SetPipelineFormats(rhi::PipelineDesc& pd) {
+            for (int i = 0; i < NUM_TARGETS; ++i) pd.colorFormats[i] = FORMATS[i];
+            pd.numColorTargets = NUM_TARGETS;
+        }
+
         void Initialize(rhi::GraphicsDevice* device, int width, int height);
         void Clear(rhi::CommandList* cmd);
 
-        // Bind RT0 + RT1 as colour targets (plus the scene depth) for the geometry pass.
+        // Bind RT0..RT2 as colour targets (plus the scene depth) for the geometry pass.
         void BindAsTargets(rhi::CommandList* cmd, rhi::GpuDepthTarget* depth);
 
         rhi::GpuTexture* DiffuseSpec() const { return tex0; }  // t0

@@ -10,7 +10,7 @@ namespace val_cg {
     public:
         LitModelComponent(Game* game,
                           const std::string& filePath,
-                          DirectX::SimpleMath::Vector3 position,
+                          math::Vector3 position,
                           float scale);
 
         void Initialize() override;

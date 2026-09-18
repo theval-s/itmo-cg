@@ -1,25 +1,25 @@
 //
 // Created by Val on 7.04.2026.
 //
+#include "math.hpp"
 #include "planet_component.hpp"
 
 #include <iostream>
 
 #include "game.hpp"
 #include "utils/geometry_generator.hpp"
-#include "SimpleMath.h"
 
 namespace val_cg {
-    using namespace DirectX::SimpleMath;
+    using namespace val_cg::math;
 
     OrbitComponent::OrbitComponent(Game* game, PlanetComponent *parent, int segmentCount, float orbitRadius,
-        DirectX::XMFLOAT4 color): MeshComponent(game), parent(parent) {
+        math::Float4 color): MeshComponent(game), parent(parent) {
         topology = rhi::PrimitiveTopology::LineList;
         points.clear();
         indices.clear();
 
-        //float phiStep = DirectX::XM_PI / segmentCount;
-        const float thetaStep = DirectX::XM_2PI / segmentCount;
+        //float phiStep = math::PI / segmentCount;
+        const float thetaStep = math::TWO_PI / segmentCount;
         for (int i = 0; i < segmentCount; i++) {
             const float theta = i * thetaStep;
             const float x = orbitRadius * cosf(theta);
@@ -46,7 +46,7 @@ namespace val_cg {
                                      float orbitSpeed,
                                      float rotationSpeed,
                                      float scale,
-                                     DirectX::XMFLOAT4 color,
+                                     math::Float4 color,
                                      PlanetComponent* parent
     )
         : MeshComponent(game),
@@ -84,12 +84,12 @@ namespace val_cg {
         if (orbit) orbit->Update(deltaTime);
     }
 
-    void PlanetComponent::MakeLineList(const DirectX::XMFLOAT4& color) {
+    void PlanetComponent::MakeLineList(const math::Float4& color) {
         MeshData mesh = GeometryGenerator::CreateSphereLineList((parent)?0.1f:0.5f,10,10, color);
         topology = rhi::PrimitiveTopology::LineList;
 
         //todo: change the whole structure
-        std::vector<DirectX::XMFLOAT4> tempPoints;
+        std::vector<math::Float4> tempPoints;
         tempPoints.reserve(mesh.vertices.size()*2);
         for (const auto& v : mesh.vertices) {
             tempPoints.push_back(v.position);
@@ -99,12 +99,12 @@ namespace val_cg {
         this->indices = mesh.indices;
     }
 
-    void PlanetComponent::MakeTriangleList(const DirectX::XMFLOAT4& color) {
+    void PlanetComponent::MakeTriangleList(const math::Float4& color) {
         MeshData mesh = GeometryGenerator::CreateSphere((parent)?0.1f:0.5f,10,10, color);
         topology = rhi::PrimitiveTopology::TriangleList;
 
         //todo: change the whole structure
-        std::vector<DirectX::XMFLOAT4> tempPoints;
+        std::vector<math::Float4> tempPoints;
         tempPoints.reserve(mesh.vertices.size()*2);
         for (const auto& v : mesh.vertices) {
             tempPoints.push_back(v.position);

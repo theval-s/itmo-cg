@@ -2,20 +2,20 @@
 // Created by Val on 18.05.2026.
 //
 
+#include "math.hpp"
 #include "ball_3d_component.hpp"
 #include "game.hpp"
 #include "paddle_3d_component.hpp"
 #include "utils/geometry_generator.hpp"
-#include "SimpleMath.h"
 #include "paddle_3d_component.hpp"
 
 namespace val_cg {
-    using namespace DirectX::SimpleMath;
+    using namespace val_cg::math;
 
     Ball3DComponent::Ball3DComponent(Game *game)
         : MeshComponent(game) {
         MeshData mesh = GeometryGenerator::CreateSphere(radius, 12, 12, {1.f, 1.f, 1.f, 1.f});
-        std::vector<DirectX::XMFLOAT4> tempPoints;
+        std::vector<math::Float4> tempPoints;
         tempPoints.reserve(mesh.vertices.size()*2);
         for (const auto& v : mesh.vertices) {
             tempPoints.push_back(v.position);

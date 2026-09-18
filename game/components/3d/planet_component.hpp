@@ -10,7 +10,7 @@ namespace val_cg {
     class PlanetComponent;
     class OrbitComponent : public MeshComponent {
     public:
-        OrbitComponent(Game* game, PlanetComponent* parent, int segmentCount, float orbitRadius, DirectX::XMFLOAT4 color);
+        OrbitComponent(Game* game, PlanetComponent* parent, int segmentCount, float orbitRadius, math::Float4 color);
         void Update(float deltaTime) override;
 
     private:
@@ -24,16 +24,16 @@ namespace val_cg {
                         float orbitSpeed,
                         float rotationSpeed,
                         float scale,
-                        DirectX::XMFLOAT4 color,
+                        math::Float4 color,
                         PlanetComponent* parent = nullptr);
 
         void Update(float deltaTime) override;
-        void MakeLineList(const DirectX::XMFLOAT4& color);
-        void MakeTriangleList(const DirectX::XMFLOAT4& color);
+        void MakeLineList(const math::Float4& color);
+        void MakeTriangleList(const math::Float4& color);
         void MakeOrbit();
         void DestroyResources() override;
         void Draw() override;
-        DirectX::SimpleMath::Matrix GetWorldMatrix() {
+        math::Matrix GetWorldMatrix() {
             return worldMatrix;
         };
 

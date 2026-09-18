@@ -4,9 +4,9 @@
 
 #pragma once
 
+#include "math.hpp"
 #include "triangle_component.hpp"
 #include "rhi/graphics_device.hpp"
-#include "SimpleMath.h"
 
 namespace val_cg {
     class BallComponent final : public TriangleComponent {
@@ -26,13 +26,13 @@ namespace val_cg {
 
     private:
         struct BallBuffer {
-            DirectX::SimpleMath::Vector4 offset;
+            math::Vector4 offset;
         };
         BallBuffer data{};
 
         float speed = 1.f;
         float v1 = 1, v2 = 0;
-        DirectX::BoundingBox collider;
+        math::BoundingBox collider;
 
     private:
         void ResetBall();

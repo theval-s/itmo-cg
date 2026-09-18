@@ -6,19 +6,21 @@
 #include "components/3d/shadow_map_component.hpp"
 #include "rendering/rendering_system.hpp"
 #include <iostream>
+#include <cstdio>
 
 namespace val_cg {
-    Game::Game(LPCWSTR applicationName, int clientWidth, int clientHeight)
-        : platform("DisplayWindow", clientWidth, clientHeight)
+    Game::Game(const char* applicationName, int clientWidth, int clientHeight, bool deferred)
+        : Name(applicationName), platform(applicationName, clientWidth, clientHeight)
     {
-        renderingSystem = new RenderingSystem(this);
+        if (deferred) renderingSystem = new RenderingSystem(this);
         CreateCamera();
         inputDevice = new InputDevice(this);
-        DisplayWin32::mInputDevice = inputDevice;
+        platform.Display().SetInputDevice(inputDevice);
     }
 
     Game::~Game() {
         DestroyResources();
+        platform.Display().SetInputDevice(nullptr);
         delete inputDevice;
         delete camera;
         delete shadowManager;
@@ -91,7 +93,7 @@ namespace val_cg {
 
         isExitRequested = false;
         while (!isExitRequested) {
-            MessageHandler();
+            if (!platform.Display().PumpEvents()) isExitRequested = true;
 
             auto curTime = std::chrono::steady_clock::now();
             float deltaTime = std::chrono::duration_cast<std::chrono::milliseconds>(curTime - PrevTime).count() / 1000.f;
@@ -101,9 +103,9 @@ namespace val_cg {
             if (TotalTime >= 1.f) {
                 float fps = fc / TotalTime;
                 TotalTime -= 1.f;
-                WCHAR text[256];
-                swprintf_s(text, L"FPS: %.2f", fps);
-                SetWindowTextW(GetWindowHandle(), text);
+                char text[256];
+                std::snprintf(text, sizeof(text), "%s - FPS: %.2f", Name.c_str(), fps);
+                platform.Display().SetTitle(text);
                 fc = 0;
             }
             UpdateInternal();
@@ -120,18 +122,6 @@ namespace val_cg {
         camera->Update(deltaTime);
         for (auto& comp : Components) {
             comp->Update(deltaTime);
-        }
-    }
-
-    void Game::MessageHandler() {
-        MSG msg = {};
-        while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
-        }
-
-        if (msg.message == WM_QUIT) {
-            isExitRequested = true;
         }
     }
 
@@ -182,14 +172,8 @@ namespace val_cg {
         // Edge-detect a left click and record the client-space pixel for the pick pass.
         const bool leftDown = inputDevice->IsKeyDown(Keys::LeftButton);
         if (leftDown && !prevLeftDown) {
-            // TODO: crossplatform — GetCursorPos/ScreenToClient are Win32-only;
-            // move cursor-to-client conversion behind the platform layer.
-            POINT p;
-            GetCursorPos(&p);
-            ScreenToClient(GetWindowHandle(), &p);
-            pickX = p.x;
-            pickY = p.y;
-            pickPending = true;
+            if (platform.Display().CursorClientPos(pickX, pickY))
+                pickPending = true;
         }
         prevLeftDown = leftDown;
     }

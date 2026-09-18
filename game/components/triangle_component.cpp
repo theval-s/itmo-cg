@@ -2,21 +2,21 @@
 // Created by Volkov Sergey on 26/02/2026.
 //
 
+#include "math.hpp"
 #include "triangle_component.hpp"
 #include "../game.hpp"
 
-#include <directxmath.h>
 
 namespace val_cg {
-    TriangleComponent::TriangleComponent(Game* game, std::span<const DirectX::XMFLOAT4> inputPoints, std::span<const int> inputIndices)
+    TriangleComponent::TriangleComponent(Game* game, std::span<const math::Float4> inputPoints, std::span<const int> inputIndices)
     : GameComponent(game) {
         if (inputPoints.empty() || inputIndices.empty()) {
             points = {
                 //position, color
-                DirectX::XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f), DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f),
-                DirectX::XMFLOAT4(-0.5f, -0.5f, 0.5f, 1.0f), DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f),
-                DirectX::XMFLOAT4(0.5f, -0.5f, 0.5f, 1.0f), DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f),
-                DirectX::XMFLOAT4(-0.5f, 0.5f, 0.5f, 1.0f), DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f)
+                math::Float4(0.5f, 0.5f, 0.5f, 1.0f), math::Float4(1.0f, 0.0f, 0.0f, 1.0f),
+                math::Float4(-0.5f, -0.5f, 0.5f, 1.0f), math::Float4(0.0f, 0.0f, 1.0f, 1.0f),
+                math::Float4(0.5f, -0.5f, 0.5f, 1.0f), math::Float4(0.0f, 1.0f, 0.0f, 1.0f),
+                math::Float4(-0.5f, 0.5f, 0.5f, 1.0f), math::Float4(1.0f, 1.0f, 1.0f, 1.0f)
             };
             indices = {0,1,2, 1,0,3};
         }
@@ -39,7 +39,7 @@ namespace val_cg {
         pd.raster.cull = rhi::CullMode::None;
         pipeline = dev->CreatePipeline(pd);
 
-        vb = dev->CreateBuffer({rhi::BufferType::Vertex, sizeof(DirectX::XMFLOAT4) * points.size()}, points.data());
+        vb = dev->CreateBuffer({rhi::BufferType::Vertex, sizeof(math::Float4) * points.size()}, points.data());
         ib = dev->CreateBuffer({rhi::BufferType::Index,  sizeof(int) * indices.size()},            indices.data());
     }
 

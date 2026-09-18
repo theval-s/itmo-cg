@@ -1,9 +1,9 @@
 #pragma once
 
+#include "math.hpp"
 #include <unordered_set>
 #include "Keys.h"
 #include "Delegates.h"
-#include "SimpleMath.h"
 #include "../exports.h"
 
 namespace val_cg {
@@ -24,13 +24,13 @@ namespace val_cg {
 
 		struct MouseMoveEventArgs
 		{
-			DirectX::SimpleMath::Vector2 Position;
-			DirectX::SimpleMath::Vector2 Offset;
+			math::Vector2 Position;
+			math::Vector2 Offset;
 			int WheelDelta;
 		};
 
-		DirectX::SimpleMath::Vector2 MousePosition;
-		DirectX::SimpleMath::Vector2 MouseOffset;
+		math::Vector2 MousePosition;
+		math::Vector2 MouseOffset;
 		int MouseWheelDelta;
 
 		MulticastDelegate<const MouseMoveEventArgs&> MouseMove;
@@ -46,20 +46,23 @@ namespace val_cg {
 		bool IsKeyDown(Keys key);
 
 	protected:
+		// Event structs below are the display → InputDevice contract. They carry
+		// plain ints so this header stays free of <windows.h>; the Win32 display
+		// fills them from RAWINPUT, a Mac display will fill them from NSEvent.
 		struct KeyboardInputEventArgs {
 			/*
 			 * The "make" scan code (key depression).
 			 */
-			USHORT MakeCode;
+			unsigned short MakeCode;
 
 			/*
 			 * The flags field indicates a "break" (key release) and other
 			 * miscellaneous scan code information defined in ntddkbd.h.
 			 */
-			USHORT Flags;
+			unsigned short Flags;
 
-			USHORT VKey;
-			UINT   Message;
+			unsigned short VKey;      // virtual-key code — maps 1:1 onto the Keys enum
+			unsigned int   Message;
 		};
 
 		enum class MouseButtonFlags
@@ -105,14 +108,12 @@ namespace val_cg {
 		};
 		struct RawMouseEventArgs
 		{
-			/*MOUSE_MOVE_RELATIVE*/
-			int Mode;
-			int ButtonFlags;
-			int ExtraInformation;
-			int Buttons;
+			int ButtonFlags;   // MouseButtonFlags bitmask (RI_MOUSE_* values)
 			int WheelDelta;
-			int X;
+			int X;             // relative motion since the previous event
 			int Y;
+			int ClientX;       // cursor position in client pixels, origin top-left
+			int ClientY;
 		};
 
 	public:
@@ -120,54 +121,4 @@ namespace val_cg {
 		void OnMouseMove(RawMouseEventArgs args);
 	};
 
-	/*
-			case WM_INPUT:
-			{
-				UINT dwSize = 0;
-				GetRawInputData(reinterpret_cast<HRAWINPUT>(lparam), RID_INPUT, nullptr, &dwSize, sizeof(RAWINPUTHEADER));
-				LPBYTE lpb = new BYTE[dwSize];
-				if (lpb == nullptr) {
-					return 0;
-				}
-
-				if (GetRawInputData((HRAWINPUT)lparam, RID_INPUT, lpb, &dwSize, sizeof(RAWINPUTHEADER)) != dwSize)
-					OutputDebugString(TEXT("GetRawInputData does not return correct size !\n"));
-
-				RAWINPUT* raw = reinterpret_cast<RAWINPUT*>(lpb);
-
-				if (raw->header.dwType == RIM_TYPEKEYBOARD)
-				{
-					//printf(" Kbd: make=%04i Flags:%04i Reserved:%04i ExtraInformation:%08i, msg=%04i VK=%i \n",
-					//	raw->data.keyboard.MakeCode,
-					//	raw->data.keyboard.Flags,
-					//	raw->data.keyboard.Reserved,
-					//	raw->data.keyboard.ExtraInformation,
-					//	raw->data.keyboard.Message,
-					//	raw->data.keyboard.VKey);
-
-					InputDevice->OnKeyDown({
-						raw->data.keyboard.MakeCode,
-						raw->data.keyboard.Flags,
-						raw->data.keyboard.VKey,
-						raw->data.keyboard.Message
-					});
-				}
-				else if (raw->header.dwType == RIM_TYPEMOUSE)
-				{
-					//printf(" Mouse: X=%04d Y:%04d \n", raw->data.mouse.lLastX, raw->data.mouse.lLastY);
-					InputDevice->OnMouseMove({
-						raw->data.mouse.usFlags,
-						raw->data.mouse.usButtonFlags,
-						static_cast<int>(raw->data.mouse.ulExtraInformation),
-						static_cast<int>(raw->data.mouse.ulRawButtons),
-						static_cast<short>(raw->data.mouse.usButtonData),
-						raw->data.mouse.lLastX,
-						raw->data.mouse.lLastY
-					});
-				}
-
-				delete[] lpb;
-				return DefWindowProc(hwnd, umessage, wparam, lparam);
-			}
-	 */
 }

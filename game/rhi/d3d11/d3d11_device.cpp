@@ -7,6 +7,7 @@
 #include <WICTextureLoader.h>
 #include <iostream>
 #include <stdexcept>
+#include <filesystem>
 
 namespace val_cg::rhi::d3d11 {
 
@@ -152,11 +153,14 @@ namespace val_cg::rhi::d3d11 {
         return raw;
     }
 
-    GpuShader* D3D11Device::CreateShader(const wchar_t* path, const char* entry, ShaderStage stage) {
+    GpuShader* D3D11Device::CreateShader(const char* path, const char* entry, ShaderStage stage) {
         // Cache hit?
         for (auto& [key, shader] : shaderCache)
             if (key.stage == stage && key.entry == entry && key.path == path)
                 return shader;
+
+        // The RHI takes narrow paths; D3DCompileFromFile wants wide.
+        const std::wstring widePath = std::filesystem::path(path).wstring();
 
         UINT flags = 0;
 #ifndef NDEBUG
@@ -167,7 +171,7 @@ namespace val_cg::rhi::d3d11 {
                                                               : "ps_5_0";
 
         ComPtr<ID3DBlob> blob, error;
-        HRESULT hr = D3DCompileFromFile(path, nullptr, nullptr, entry, target, flags, 0,
+        HRESULT hr = D3DCompileFromFile(widePath.c_str(), nullptr, nullptr, entry, target, flags, 0,
                                         &blob, &error);
         if (FAILED(hr)) {
             if (error) std::cerr << "[D3D11Device] shader error (" << entry << "): "
@@ -265,11 +269,12 @@ namespace val_cg::rhi::d3d11 {
         return raw;
     }
 
-    GpuTexture* D3D11Device::CreateTextureFromFile(const wchar_t* path) {
+    GpuTexture* D3D11Device::CreateTextureFromFile(const char* path) {
         auto tex = std::make_unique<D3D11Texture>();
-        HRESULT hr = DirectX::CreateWICTextureFromFile(device.Get(), path, nullptr, &tex->srv);
+        const std::wstring widePath = std::filesystem::path(path).wstring();
+        HRESULT hr = DirectX::CreateWICTextureFromFile(device.Get(), widePath.c_str(), nullptr, &tex->srv);
         if (FAILED(hr))
-            std::wcerr << L"[D3D11Device] failed to load texture: " << path << L"\n";
+            std::cerr << "[D3D11Device] failed to load texture: " << path << "\n";
         GpuTexture* raw = tex.get();
         textures.push_back(std::move(tex));
         return raw;

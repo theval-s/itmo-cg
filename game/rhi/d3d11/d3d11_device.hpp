@@ -26,11 +26,11 @@ namespace val_cg::rhi::d3d11 {
         ~D3D11Device() override = default;
 
         GpuBuffer*   CreateBuffer(const BufferDesc& desc, const void* initialData) override;
-        GpuShader*   CreateShader(const wchar_t* path, const char* entry, ShaderStage stage) override;
+        GpuShader*   CreateShader(const char* path, const char* entry, ShaderStage stage) override;
         GpuPipeline* CreatePipeline(const PipelineDesc& desc) override;
         GpuSampler*  CreateSampler(const SamplerDesc& desc) override;
         GpuTexture*  CreateTexture(const TextureDesc& desc) override;
-        GpuTexture*  CreateTextureFromFile(const wchar_t* path) override;
+        GpuTexture*  CreateTextureFromFile(const char* path) override;
         GpuRenderTarget* CreateRenderTarget(const TextureDesc& desc, GpuTexture** outTexture) override;
         GpuDepthTarget*  CreateDepthTarget(const TextureDesc& desc, GpuTexture** outTexture) override;
 
@@ -77,7 +77,7 @@ namespace val_cg::rhi::d3d11 {
         std::vector<std::unique_ptr<GpuSampler>>      samplerObjs;
 
         // Shader cache key (path + entry + stage).
-        struct ShaderKey { std::wstring path; std::string entry; ShaderStage stage; };
+        struct ShaderKey { std::string path; std::string entry; ShaderStage stage; };
         std::vector<std::pair<ShaderKey, D3D11Shader*>> shaderCache;
     };
 

@@ -2,8 +2,8 @@
 
 namespace val_cg {
     PointLightComponent::PointLightComponent(Game* game,
-                                             DirectX::XMFLOAT3 position,
-                                             DirectX::XMFLOAT3 color,
+                                             math::Float3 position,
+                                             math::Float3 color,
                                              float attenConst,
                                              float attenLinear,
                                              float attenQuad)

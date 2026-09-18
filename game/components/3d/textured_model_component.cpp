@@ -8,13 +8,13 @@
 #include <iostream>
 
 namespace val_cg {
-    using namespace DirectX::SimpleMath;
+    using namespace val_cg::math;
 
-    namespace { struct TexVert { DirectX::XMFLOAT4 pos; DirectX::XMFLOAT2 uv; }; }
+    namespace { struct TexVert { math::Float4 pos; math::Float2 uv; }; }
 
     TexturedModelComponent::TexturedModelComponent(Game* game,
                                                    const std::string& modelPath,
-                                                   const std::wstring& texturePath,
+                                                   const std::string& texturePath,
                                                    Vector3 position,
                                                    float scale)
         : MeshComponent(game)
@@ -45,7 +45,7 @@ namespace val_cg {
             TexVert tv;
             tv.pos = points[i * 2];
             tv.uv  = (i < static_cast<int>(meshUVs.size())) ? meshUVs[i]
-                                                            : DirectX::XMFLOAT2{0.f, 0.f};
+                                                            : math::Float2{0.f, 0.f};
             texVerts.push_back(tv);
         }
 

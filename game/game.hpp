@@ -28,7 +28,10 @@ namespace val_cg {
         Platform platform;   // OS window + graphics device (host layer)
 
     public:
-        Game(LPCWSTR applicationName=L"Game", int clientWidth=800, int clientHeight=600);
+        // deferred=false skips the RenderingSystem: every component draws itself in the
+        // forward pass (labs 1–6). deferred=true is the Katamari G-buffer + lighting path.
+        Game(const char* applicationName="Game", int clientWidth=800, int clientHeight=600,
+             bool deferred=true);
         ~Game();
 
         // Host accessors used by every component — forward to the platform layer.
@@ -36,14 +39,13 @@ namespace val_cg {
         rhi::CommandList*    GetCommandList()  const { return platform.CommandList(); }
         int GetWidth()  const { return platform.Width(); }
         int GetHeight() const { return platform.Height(); }
-        HWND GetWindowHandle() const { return platform.WindowHandle(); }
+        Display& GetDisplay() const { return platform.Display(); }
 
         void DestroyResources();
         void Draw();
         void Exit();
         void Run();
         void Update(float deltaTime) const;
-        void MessageHandler();
         void Initialize();
         void Scored();
         void CreateCamera();

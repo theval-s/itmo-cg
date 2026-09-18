@@ -6,7 +6,17 @@
 
 #include "display_win32.hpp"
 
-val_cg::InputDevice* DisplayWin32::mInputDevice = nullptr;
+namespace val_cg {
+
+InputDevice* DisplayWin32::mInputDevice = nullptr;
+
+namespace {
+
+// Raw mouse input in absolute mode (RDP, tablets) reports [0,65535] over the
+// virtual screen; we turn it into a delta ourselves so InputDevice only ever
+// sees relative motion.
+int lastAbsX = 0, lastAbsY = 0;
+bool haveLastAbs = false;
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
@@ -29,14 +39,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
             if (raw->header.dwType == RIM_TYPEKEYBOARD)
             {
-                //printf(" Kbd: make=%04i Flags:%04i Reserved:%04i ExtraInformation:%08i, msg=%04i VK=%i \n",
-                //	raw->data.keyboard.MakeCode,
-                //	raw->data.keyboard.Flags,
-                //	raw->data.keyboard.Reserved,
-                //	raw->data.keyboard.ExtraInformation,
-                //	raw->data.keyboard.Message,
-                //	raw->data.keyboard.VKey);
-
                 DisplayWin32::mInputDevice->OnKeyDown({
                     raw->data.keyboard.MakeCode,
                     raw->data.keyboard.Flags,
@@ -46,15 +48,29 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
             }
             else if (raw->header.dwType == RIM_TYPEMOUSE)
             {
-                //printf(" Mouse: X=%04d Y:%04d \n", raw->data.mouse.lLastX, raw->data.mouse.lLastY);
+                int dx = raw->data.mouse.lLastX;
+                int dy = raw->data.mouse.lLastY;
+                if (raw->data.mouse.usFlags & MOUSE_MOVE_ABSOLUTE) {
+                    const int screenW = GetSystemMetrics(SM_CXVIRTUALSCREEN);
+                    const int screenH = GetSystemMetrics(SM_CYVIRTUALSCREEN);
+                    const int absX = static_cast<int>((raw->data.mouse.lLastX / 65535.0f) * screenW);
+                    const int absY = static_cast<int>((raw->data.mouse.lLastY / 65535.0f) * screenH);
+                    dx = haveLastAbs ? absX - lastAbsX : 0;
+                    dy = haveLastAbs ? absY - lastAbsY : 0;
+                    lastAbsX = absX; lastAbsY = absY; haveLastAbs = true;
+                }
+
+                POINT p;
+                GetCursorPos(&p);
+                ScreenToClient(hWnd, &p);
+
                 DisplayWin32::mInputDevice->OnMouseMove({
-                    raw->data.mouse.usFlags,
                     raw->data.mouse.usButtonFlags,
-                    static_cast<int>(raw->data.mouse.ulExtraInformation),
-                    static_cast<int>(raw->data.mouse.ulRawButtons),
                     static_cast<short>(raw->data.mouse.usButtonData),
-                    raw->data.mouse.lLastX,
-                    raw->data.mouse.lLastY
+                    dx,
+                    dy,
+                    static_cast<int>(p.x),
+                    static_cast<int>(p.y)
                 });
             }
 
@@ -78,6 +94,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         }
     }
 }
+
+} // namespace
 
 DisplayWin32::DisplayWin32(std::string name, int clientWidth, int clientHeight) {
     Name = name;
@@ -115,4 +133,55 @@ DisplayWin32::DisplayWin32(std::string name, int clientWidth, int clientHeight) 
     SetForegroundWindow(hWnd);
     SetFocus(hWnd);
     ShowCursor(true);
+
+    RegisterRawInput();
 }
+
+void DisplayWin32::RegisterRawInput() const {
+    RAWINPUTDEVICE Rid[2];
+
+    Rid[0].usUsagePage = 0x01;
+    Rid[0].usUsage = 0x02;
+    Rid[0].dwFlags = 0;   // adds HID mouse and also ignores legacy mouse messages
+    Rid[0].hwndTarget = hWnd;
+
+    Rid[1].usUsagePage = 0x01;
+    Rid[1].usUsage = 0x06;
+    Rid[1].dwFlags = 0;   // adds HID keyboard and also ignores legacy keyboard messages
+    Rid[1].hwndTarget = hWnd;
+
+    if (RegisterRawInputDevices(Rid, 2, sizeof(Rid[0])) == FALSE)
+    {
+        auto errorCode = GetLastError();
+        std::cout << "ERROR: RegisterRawInputDevices failed: " << errorCode << std::endl;
+    }
+}
+
+bool DisplayWin32::PumpEvents() {
+    MSG msg = {};
+    while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
+        if (msg.message == WM_QUIT) return false;
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+    return true;
+}
+
+void DisplayWin32::SetTitle(const char* title) {
+    SetWindowTextA(hWnd, title);
+}
+
+bool DisplayWin32::CursorClientPos(int& x, int& y) const {
+    POINT p;
+    if (!GetCursorPos(&p)) return false;
+    if (!ScreenToClient(hWnd, &p)) return false;
+    x = p.x;
+    y = p.y;
+    return true;
+}
+
+std::unique_ptr<Display> CreateDisplay(const std::string& name, int clientWidth, int clientHeight) {
+    return std::make_unique<DisplayWin32>(name, clientWidth, clientHeight);
+}
+
+} // namespace val_cg

@@ -3,8 +3,8 @@
 //
 
 #pragma once
+#include "math.hpp"
 #include "lit_mesh_component.hpp"
-#include <DirectXCollision.h>
 #include <string>
 #include <vector>
 
@@ -15,8 +15,8 @@ namespace val_cg {
         // heightMapPath : grayscale PNG for elevation (nullptr → procedural)
         // diffusePath   : color bitmap to texture the surface (nullptr → solid green fallback)
         TerrainComponent(Game* game,
-            const wchar_t* heightMapPath,
-            const wchar_t* diffusePath,
+            const char* heightMapPath,
+            const char* diffusePath,
             float width = 30.f, float depth = 30.f,
             float maxHeight = 2.5f);
 
@@ -36,12 +36,12 @@ namespace val_cg {
         int rows_, cols_;
         float width_, depth_, maxHeight_;
         std::vector<float> heights_;
-        std::wstring diffusePath_;
+        std::string diffusePath_;
 
         rhi::GpuTexture* srv_     = nullptr;
         rhi::GpuSampler* sampler_ = nullptr;
 
-        static std::vector<float> TryLoadFromFile(const wchar_t* path, int& outRows, int& outCols);
+        static std::vector<float> TryLoadFromFile(const char* path, int& outRows, int& outCols);
         static std::vector<float> ProceduralHeights(int rows, int cols);
     };
 
@@ -55,16 +55,16 @@ namespace val_cg {
         void Draw() override;
         bool IsTextured() const override { return true; }
         void DrawDeferred(rhi::CommandList* cmd, rhi::GpuBuffer* gbufferCB) override;
-        const DirectX::SimpleMath::Vector3& GetPosition() const { return position; }
+        const math::Vector3& GetPosition() const { return position; }
         const float& GetRadius() const { return radius; }
         void SetTerrain(TerrainComponent* t) { terrain_ = t; }
     private:
-        DirectX::SimpleMath::Vector3 position{};
-        DirectX::SimpleMath::Quaternion rollRotation{};
-        DirectX::SimpleMath::Matrix rollMatrix{};
+        math::Vector3 position{};
+        math::Quaternion rollRotation{};
+        math::Matrix rollMatrix{};
         float radius = 0.5f;
         float speed  = 5.0f;
-        DirectX::BoundingSphere collider{};
+        math::BoundingSphere collider{};
         TerrainComponent* terrain_ = nullptr;
 
         void CheckCollision();

@@ -21,12 +21,14 @@ namespace val_cg::rhi {
         virtual GpuBuffer*   CreateBuffer(const BufferDesc& desc, const void* initialData = nullptr) = 0;
 
         // Shaders and pipelines are cached: identical requests return the same object.
-        virtual GpuShader*   CreateShader(const wchar_t* path, const char* entry, ShaderStage stage) = 0;
+        // Paths are UTF-8 narrow strings, relative to the working directory; backends
+        // convert to their native encoding internally.
+        virtual GpuShader*   CreateShader(const char* path, const char* entry, ShaderStage stage) = 0;
         virtual GpuPipeline* CreatePipeline(const PipelineDesc& desc) = 0;
         virtual GpuSampler*  CreateSampler(const SamplerDesc& desc) = 0;
 
         virtual GpuTexture*  CreateTexture(const TextureDesc& desc) = 0;
-        virtual GpuTexture*  CreateTextureFromFile(const wchar_t* path) = 0;
+        virtual GpuTexture*  CreateTextureFromFile(const char* path) = 0;
 
         // Render/depth targets. CreateRenderTarget returns the writable target;
         // pass `outTexture` to also get its sampleable SRV view.

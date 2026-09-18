@@ -8,7 +8,7 @@
 #include <iostream>
 
 namespace val_cg {
-    using namespace DirectX::SimpleMath;
+    using namespace val_cg::math;
 
     RenderingSystem::RenderingSystem(Game* g) : game(g) {}
 
@@ -33,6 +33,7 @@ namespace val_cg {
             pd.ps = dev->CreateShader(GBUFFER_SHADER_PATH, "PSMain", rhi::ShaderStage::Pixel);
             pd.layout.attributes = litLayout;
             pd.raster.cull = rhi::CullMode::None;
+            GBuffer::SetPipelineFormats(pd);
             gbufferPipe = dev->CreatePipeline(pd);
         }
         // Textured lit meshes — own VS (emits local objPos for spherical UV) + textured PS.
@@ -42,6 +43,7 @@ namespace val_cg {
             pd.ps = dev->CreateShader(GBUFFER_TEXTURED_SHADER_PATH, "PSMain", rhi::ShaderStage::Pixel);
             pd.layout.attributes = litLayout;
             pd.raster.cull = rhi::CullMode::None;
+            GBuffer::SetPipelineFormats(pd);
             gbufferTexPipe = dev->CreatePipeline(pd);
         }
         // Terrain.
@@ -51,6 +53,7 @@ namespace val_cg {
             pd.ps = dev->CreateShader(GBUFFER_TERRAIN_SHADER_PATH, "PSMain", rhi::ShaderStage::Pixel);
             pd.layout.attributes = terrainLayout;
             pd.raster.cull = rhi::CullMode::None;
+            GBuffer::SetPipelineFormats(pd);
             terrainPipe = dev->CreatePipeline(pd);
         }
         // Lighting: fullscreen quad, additive blend, no depth.

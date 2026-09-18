@@ -15,15 +15,15 @@ namespace val_cg {
     public:
         TexturedModelComponent(Game* game,
                                const std::string& modelPath,
-                               const std::wstring& texturePath,
-                               DirectX::SimpleMath::Vector3 position,
+                               const std::string& texturePath,
+                               math::Vector3 position,
                                float scale);
 
         void Initialize() override;
         void Draw() override;
 
     private:
-        std::wstring texturePath;
+        std::string texturePath;
         rhi::GpuTexture* srv     = nullptr;
         rhi::GpuSampler* sampler = nullptr;
         int vertexCount = 0;

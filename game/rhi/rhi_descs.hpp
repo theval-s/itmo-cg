@@ -95,6 +95,17 @@ namespace val_cg::rhi {
         BlendDesc         blend;
         DepthStencilDesc  depth;
         PrimitiveTopology topology = PrimitiveTopology::TriangleList;
+
+        // Colour attachment formats the pipeline will render into. Metal bakes these
+        // into the PSO; D3D11 ignores them. Default = one backbuffer-format target.
+        // Depth-only pipelines set numColorTargets = 0. (No depth format: Metal 4's
+        // RenderPipelineDescriptor does not take one.)
+        static constexpr int MAX_COLOR_TARGETS = 4;
+        TextureFormat colorFormats[MAX_COLOR_TARGETS] = {
+            TextureFormat::BGRA8_UNORM, TextureFormat::BGRA8_UNORM,
+            TextureFormat::BGRA8_UNORM, TextureFormat::BGRA8_UNORM,
+        };
+        int numColorTargets = 1;
     };
 
 }

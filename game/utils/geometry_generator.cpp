@@ -5,14 +5,14 @@
 #include "geometry_generator.hpp"
 
 namespace val_cg {
-    MeshData GeometryGenerator::CreateSphere(float radius, int sliceCount, int stackCount, DirectX::XMFLOAT4 color) {
+    MeshData GeometryGenerator::CreateSphere(float radius, int sliceCount, int stackCount, math::Float4 color) {
         MeshData data;
         //data.vertices.reserve(...);
 
         data.vertices.push_back(Vertex({0.0f, radius, 0.0f, 1.0f}, color));
 
-        float phiStep = DirectX::XM_PI / stackCount;
-        float thetaStep = DirectX::XM_2PI / sliceCount;
+        float phiStep = math::PI / stackCount;
+        float thetaStep = math::TWO_PI / sliceCount;
 
         for (int i = 1; i <= stackCount - 1; i++) {
             float phi = i * phiStep;
@@ -61,13 +61,13 @@ namespace val_cg {
         return data;
     }
 
-    MeshData GeometryGenerator::CreateSphereLineList(float radius, int sliceCount, int stackCount, DirectX::XMFLOAT4 color) {
+    MeshData GeometryGenerator::CreateSphereLineList(float radius, int sliceCount, int stackCount, math::Float4 color) {
         MeshData data;
 
         data.vertices.push_back(Vertex({0.0f, radius, 0.0f, 1.0f}, color));
 
-        float phiStep = DirectX::XM_PI / stackCount;
-        float thetaStep = DirectX::XM_2PI / sliceCount;
+        float phiStep = math::PI / stackCount;
+        float thetaStep = math::TWO_PI / sliceCount;
 
         for (int i = 1; i <= stackCount - 1; i++) {
             float phi = i * phiStep;
@@ -118,7 +118,7 @@ namespace val_cg {
         return data;
     }
 
-    MeshData GeometryGenerator::CreateBox(float hx, float hy, float hz, DirectX::XMFLOAT4 color) {
+    MeshData GeometryGenerator::CreateBox(float hx, float hy, float hz, math::Float4 color) {
         MeshData data;
         data.vertices = {
             Vertex({-hx,-hy,-hz,1}, color),
@@ -149,7 +149,7 @@ namespace val_cg {
         float dx = width  / (cols - 1);
         float dz = depth  / (rows - 1);
 
-        std::vector<DirectX::XMFLOAT3> normals(rows * cols, {0.f, 0.f, 0.f});
+        std::vector<math::Float3> normals(rows * cols, {0.f, 0.f, 0.f});
 
         for (int r = 0; r < rows; ++r) {
             for (int c = 0; c < cols; ++c) {
@@ -164,7 +164,7 @@ namespace val_cg {
 
         // Unnormalized cross product of two triangle edges (b-a)x(c-a), via plain
         // float math — XMVECTOR has no usable operator- on Windows (it's __m128).
-        auto faceNormal = [&](int a, int b, int c) -> DirectX::XMFLOAT3 {
+        auto faceNormal = [&](int a, int b, int c) -> math::Float3 {
             const auto& pa = data.vertices[a].position;
             const auto& pb = data.vertices[b].position;
             const auto& pc = data.vertices[c].position;
@@ -174,7 +174,7 @@ namespace val_cg {
                      e1z * e2x - e1x * e2z,
                      e1x * e2y - e1y * e2x };
         };
-        auto accum = [&](int idx, const DirectX::XMFLOAT3& n) {
+        auto accum = [&](int idx, const math::Float3& n) {
             normals[idx].x += n.x; normals[idx].y += n.y; normals[idx].z += n.z;
         };
 
@@ -186,8 +186,8 @@ namespace val_cg {
                 int br = bl + 1;
 
                 // Area-weighted (unnormalized) face normals matching the winding below.
-                DirectX::XMFLOAT3 n1 = faceNormal(tl, bl, tr);
-                DirectX::XMFLOAT3 n2 = faceNormal(tr, bl, br);
+                math::Float3 n1 = faceNormal(tl, bl, tr);
+                math::Float3 n2 = faceNormal(tr, bl, br);
 
                 accum(tl, n1);
                 accum(bl, n1); accum(bl, n2);

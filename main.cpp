@@ -16,13 +16,15 @@
 #include "game/game.hpp"
 #include "game/components/paddle_component.hpp"
 #include <random>
+#include <cstdlib>
+#include <string>
 #include "game/components/camera_component.hpp"
 
 void GenerateSolarSystem(val_cg::Game* game) {
     val_cg::PlanetComponent* Sun = new val_cg::PlanetComponent(game, 0.f, 0.f, 1.0f, 1.f, {1.f, 0.95f, 0.f, 1.f});
     Sun->MakeLineList({1.f, 0.95f, 0.f, 1.f});
-    game->Components.push_back(Sun);
-    game->Components.push_back(new val_cg::PlanetComponent(game, 15.f, 0.5f, 1.f, 0.5f, {1.f, 1.f, 1.f, 1.f}, Sun));
+    game->AddComponent(Sun);
+    game->AddComponent(new val_cg::PlanetComponent(game, 15.f, 0.5f, 1.f, 0.5f, {1.f, 1.f, 1.f, 1.f}, Sun));
 
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -32,20 +34,26 @@ void GenerateSolarSystem(val_cg::Game* game) {
     for (int i = 0; i < 10; i++) {
         if (i%2 == 1) {
             auto temptemp = new val_cg::PlanetComponent(game, 1.f, 1.f, 1000.f, dist5(gen), {dist1(gen), dist1(gen), dist1(gen), 1}, tmp);
-            game->Components.push_back(temptemp);
+            game->AddComponent(temptemp);
             temptemp->MakeOrbit();
         } else {
             tmp = new val_cg::PlanetComponent(game, i+2.f, dist1(gen) , 1000.f, dist5(gen), {dist1(gen), dist1(gen), dist1(gen), 1}, Sun);
-            game->Components.push_back(tmp);
+            game->AddComponent(tmp);
             tmp->MakeOrbit();
         }
     }
 }
 
-void GenerateKatamari(val_cg::Game* game) {
-    using namespace DirectX::SimpleMath;
+// Katamari scene, grown lab by lab
+//   4  terrain + coloured/textured models + player       (forward, unlit)
+//   5  + directional light                               (forward Phong)
+//   6  + cascaded shadow maps                            (forward CSM)
+//   7  + spot light, light shooter                       (deferred G-buffer + lighting)
+//   8  + GPU particle fountain                           (deferred + compute)
+void GenerateKatamari(val_cg::Game* game, int lab) {
+    using namespace val_cg::math;
 
-    struct ModelDef { const char* path; DirectX::XMFLOAT4 color; float scale; };
+    struct ModelDef { const char* path; Float4 color; float scale; };
     static constexpr ModelDef defs[] = {
         {"./models/mouse.fbx", {0.8f, 0.7f, 0.6f, 1.f}, 0.004f},
         {"./models/pizza.fbx", {0.9f, 0.6f, 0.1f, 1.f}, 0.7f},
@@ -59,14 +67,17 @@ void GenerateKatamari(val_cg::Game* game) {
     std::uniform_real_distribution<float> scaleMult(0.7f, 1.6f);
 
     auto* terrain = new val_cg::TerrainComponent(game,
-        L"./textures/heightmap.png",
-        L"./textures/terrain_diffuse.png",
+        "./textures/heightmap.png",
+        "./textures/terrain_diffuse.png",
         30.f, 30.f, 5.f);
     game->AddComponent(terrain);
 
-    auto* sun = new val_cg::DirectionalLightComponent(game, {1,1.f,0}, {1.f,0.9f,0.8f});
-    game->AddLight(sun);
-    game->SetShadowManager(new val_cg::ShadowMapComponent(game, sun));
+    if (lab >= 5) {
+        auto* sun = new val_cg::DirectionalLightComponent(game, {1,1.f,0}, {1.f,0.9f,0.8f});
+        game->AddLight(sun);
+        if (lab >= 6)
+            game->SetShadowManager(new val_cg::ShadowMapComponent(game, sun));
+    }
 
     for (int i = 0; i < 25; ++i) {
         const auto& def = defs[i % 5];
@@ -76,7 +87,9 @@ void GenerateKatamari(val_cg::Game* game) {
         float s = def.scale * scaleMult(gen);
         if (i % 5 == 0) {
             game->AddComponent(new val_cg::TexturedModelComponent(
-                game, def.path, L"./models/mouse_diffuse.png", pos, s));
+                game, def.path, "./models/mouse_diffuse.png", pos, s));
+        } else if (lab < 5) {
+            game->AddComponent(new val_cg::ModelComponent(game, def.path, pos, s, def.color));
         } else if (i%5 == 3) {
             game->AddComponent(new val_cg::LitModelComponent(game, "models/diamond.obj", pos, s));
         } else {
@@ -89,53 +102,79 @@ void GenerateKatamari(val_cg::Game* game) {
     game->AddComponent(player);
     game->GetCamera()->SetOrbitTarget(&player->GetPosition(), &player->GetRadius(), 8.f);
 
-    game->AddComponent(new val_cg::LightShooterComponent(game));
+    if (lab >= 7) {
+        game->AddComponent(new val_cg::LightShooterComponent(game));
 
-    // Particle fountain at the centre of the scene.
-    {
+        // Spot light pointing straight down over the starting area
+        game->AddLight(new val_cg::SpotLightComponent(
+            game,
+            Vector3{0.f, 6.f, 0.f},   // position: above centre
+            Vector3{0.f, -1.f, 0.f},  // direction: straight down
+            15.f,   // inner cone half-angle (degrees)
+            35.f,   // outer cone half-angle (degrees)
+            {0.9f, 0.8f, 1.0f}  // cool white
+        ));
+    }
+
+    if (lab >= 8) {
+        // Particle fountain at the centre of the scene.
         Vector3 fountainPos{0.f, 0.f, 0.f};
         fountainPos.y = terrain->GetHeightAt(fountainPos.x, fountainPos.z);
         game->AddComponent(new val_cg::ParticleSystemComponent(game, fountainPos));
     }
-
-    // Spot light pointing straight down over the starting area
-    game->AddLight(new val_cg::SpotLightComponent(
-        game,
-        DirectX::SimpleMath::Vector3{0.f, 6.f, 0.f},  // position: above centre
-        DirectX::SimpleMath::Vector3{0.f, -1.f, 0.f}, // direction: straight down
-        15.f,   // inner cone half-angle (degrees)
-        35.f,   // outer cone half-angle (degrees)
-        {0.9f, 0.8f, 1.0f}  // cool white
-    ));
 }
 
-int main() {
+// Lab selection: `./itmo_cg.exe <lab>` or env ITMO_LAB=<lab>; default is 8.
+//   1      triangle
+//   2      pong (3D paddles/ball)      2d  pong (2D, lab 2 first half)
+//   3      solar system
+//   4..8   Katamari (see GenerateKatamari)
+// Labs 1–6 run the forward path (no RenderingSystem); 7–8 run deferred.
+std::string SelectLab(int argc, char** argv) {
+    if (argc > 1 && argv[1][0] != '\0') return argv[1];
+    if (const char* env = std::getenv("ITMO_LAB"); env && env[0] != '\0') return env;
+    return "8";
+}
+
+int main(int argc, char** argv) {
     srand(time(NULL));
-    val_cg::Game* game =  new val_cg::Game(L"Game", 1600, 900);
-    // Lab 1
-    //game->Components.push_back(new val_cg::TriangleComponent(game));
 
-    // Lab 2
-    // game->Components.push_back(new val_cg::PaddleComponent(game, val_cg::PaddleComponent::Left));
-    // game->Components.push_back(new val_cg::PaddleComponent(game, val_cg::PaddleComponent::Right));
-    // game->Components.push_back(new val_cg::BallComponent(game));
-            //game->GetCamera()->SetPosition({0.f, 0.f, 12.f});
-     // game->Components.push_back(new val_cg::Paddle3DComponent(game, val_cg::Paddle3DComponent::Left));
-     // game->Components.push_back(new val_cg::Paddle3DComponent(game, val_cg::Paddle3DComponent::Right));
-     // game->Components.push_back(new val_cg::Ball3DComponent(game));
-     // game->Run();
-     // return 0;
+    const std::string labStr = SelectLab(argc, argv);
+    const bool pong3d = (labStr == "3d");
+    const int  lab    = pong3d ? 2 : std::atoi(labStr.c_str());
+    if (lab < 1 || lab > 8) {
+        std::cerr << "Unknown lab '" << labStr << "' (expected 1..8 or 3d)\n";
+        return 1;
+    }
+    std::cout << "Lab " << labStr << (lab >= 7 ? " (deferred)" : " (forward)") << "\n";
 
-    // std::cout << "lab3(mod) or lab4:>";
-    // std::cin >> input;
+    val_cg::Game* game = new val_cg::Game("Game", 1600, 900, /*deferred*/ lab >= 7);
 
-    // Lab 3
-    //GenerateSolarSystem(game);
-
-
-    // Lab 4-5 – Katamari
-    GenerateKatamari(game);
+    switch (lab) {
+        case 1:
+            game->AddComponent(new val_cg::TriangleComponent(game));
+            break;
+        case 2:
+            if (!pong3d) {
+                game->AddComponent(new val_cg::PaddleComponent(game, val_cg::PaddleComponent::Left));
+                game->AddComponent(new val_cg::PaddleComponent(game, val_cg::PaddleComponent::Right));
+                game->AddComponent(new val_cg::BallComponent(game));
+            } else {
+                game->GetCamera()->SetPosition({0.f, 0.f, 12.f});
+                game->AddComponent(new val_cg::Paddle3DComponent(game, val_cg::Paddle3DComponent::Left));
+                game->AddComponent(new val_cg::Paddle3DComponent(game, val_cg::Paddle3DComponent::Right));
+                game->AddComponent(new val_cg::Ball3DComponent(game));
+            }
+            break;
+        case 3:
+            GenerateSolarSystem(game);
+            break;
+        default:
+            GenerateKatamari(game, lab);
+            break;
+    }
 
     game->Run();
+    delete game;
     return 0;
 }

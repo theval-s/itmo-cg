@@ -4,11 +4,10 @@
 
 #pragma once
 
+#include "math.hpp"
 #include "game_component.hpp"
 #include "triangle_component.hpp"
 #include "rhi/graphics_device.hpp"
-#include "SimpleMath.h"
-#include "DirectXCollision.h"
 
 namespace val_cg {
     class PaddleComponent : public TriangleComponent {
@@ -21,7 +20,7 @@ namespace val_cg {
             Bottom
         };
         rhi::GpuBuffer* constantBuffer = nullptr;
-        DirectX::BoundingBox collider;
+        math::BoundingBox collider;
 
 
     private:
@@ -29,7 +28,7 @@ namespace val_cg {
         float speed = 1;
 
         struct PaddleBuffer {
-            DirectX::SimpleMath::Vector4 offset;
+            math::Vector4 offset;
         };
         PaddleBuffer data{};
 
