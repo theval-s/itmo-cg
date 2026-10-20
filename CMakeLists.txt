@@ -64,15 +64,15 @@ endif()
 # The engine's math is DirectXMath + DirectXTK SimpleMath (see game/math.hpp).
 # Windows: both come with the vcpkg `directxtk` package (also used for WICTextureLoader
 # in the D3D11 backend). macOS: DirectXMath from the vcpkg `directxmath` port (portable,
-# NEON on arm64) and SimpleMath vendored in external/SimpleMath (no DirectXTK port exists).
+# NEON on arm64) and SimpleMath vendored in external/directxtk-simplemath (no DirectXTK port).
 if(WIN32)
     find_package(directxtk CONFIG REQUIRED)
     target_link_libraries(itmo_cg Microsoft::DirectXTK)
 else()
     find_package(directxmath CONFIG REQUIRED)
     target_link_libraries(itmo_cg Microsoft::DirectXMath)
-    target_sources(itmo_cg PRIVATE external/SimpleMath/SimpleMath.cpp)
-    target_include_directories(itmo_cg PRIVATE external/SimpleMath)
+    target_sources(itmo_cg PRIVATE external/directxtk-simplemath/SimpleMath.cpp)
+    target_include_directories(itmo_cg PRIVATE external/directxtk-simplemath)
 endif()
 
 # Assimp (model loading) comes from vcpkg on every platform.
