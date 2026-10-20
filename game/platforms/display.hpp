@@ -3,7 +3,7 @@
 //
 // Everything Game needs from the windowing system goes through this interface so
 // that Game/Platform stay free of Win32/AppKit. Concrete implementations live in
-// game/platforms/display_win32.* (Win32) and, later, display_mac.mm (AppKit).
+// game/platforms/win32/ (Win32) and game/platforms/macos/ (AppKit via metal-cpp).
 //
 // Input: the display translates native events (raw input / NSEvent) into the
 // platform-neutral InputDevice callbacks (OnKeyDown / OnMouseMove, Keys = VK codes).
@@ -19,7 +19,7 @@ namespace val_cg {
     public:
         virtual ~Display() = default;
 
-        // HWND on Windows, NSWindow* on macOS — handed straight to rhi::CreateGraphicsDevice.
+        // HWND on Windows, CA::MetalLayer* on macOS — handed straight to rhi::CreateGraphicsDevice.
         virtual void* NativeHandle() const = 0;
 
         // Drain the OS event queue. Returns false once the OS asked us to quit.

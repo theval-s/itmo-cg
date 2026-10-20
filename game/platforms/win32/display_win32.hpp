@@ -9,7 +9,7 @@
 #include <windows.h>
 #include <string>
 
-#include "display.hpp"
+#include "platforms/display.hpp"
 #include "InputDevice.h"
 
 namespace val_cg {
