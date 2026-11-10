@@ -52,7 +52,7 @@ void val_cg::CameraComponent::Update(float deltaTime) {
         if (input->IsKeyDown(Keys::W)) orbitDistance -= zoomSpeed * deltaTime;
         if (input->IsKeyDown(Keys::S)) orbitDistance += zoomSpeed * deltaTime;
         float minDistance = orbitTargetRadius ? (*orbitTargetRadius + 0.3f) : 0.5f;
-        orbitDistance = max(minDistance, orbitDistance);
+        orbitDistance = std::max(minDistance, orbitDistance);
 
         cameraPosition = *orbitTarget - rot.Forward() * orbitDistance;
         viewMatrix = Matrix::CreateLookAt(cameraPosition, *orbitTarget, rot.Up());

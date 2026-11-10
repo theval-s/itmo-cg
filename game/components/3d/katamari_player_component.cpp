@@ -119,7 +119,7 @@ namespace val_cg {
         float v = std::clamp((wz + depth_  * 0.5f) / depth_,  0.f, 1.f);
         float fc = u * (cols_ - 1), fr = v * (rows_ - 1);
         int c0 = (int)fc, r0 = (int)fr;
-        int c1 = min(c0+1, cols_-1), r1 = min(r0+1, rows_-1);
+        int c1 = std::min(c0+1, cols_-1), r1 = std::min(r0+1, rows_-1);
         float tc = fc-c0, tr = fr-r0;
         float h = heights_[r0*cols_+c0]*(1-tc)*(1-tr)
                 + heights_[r0*cols_+c1]*tc*(1-tr)

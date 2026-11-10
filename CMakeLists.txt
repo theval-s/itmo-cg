@@ -48,6 +48,8 @@ if(WIN32)
             game/rhi/d3d11/d3d11_state_cache.cpp
     )
     target_link_libraries(itmo_cg d3d11 dxgi d3dcompiler)
+    # stupid windows stuff
+    target_compile_definitions(itmo_cg PRIVATE NOMINMAX)
 elseif(APPLE)
     target_sources(itmo_cg PRIVATE
             game/platforms/macos/display_mac.cpp

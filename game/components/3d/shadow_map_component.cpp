@@ -120,7 +120,7 @@ namespace val_cg {
             center /= 8.f;
 
             float radius = 0.f;
-            for (auto& sc : sub) radius = max(radius, (sc - center).Length());
+            for (auto& sc : sub) radius = std::max(radius, (sc - center).Length());
             // Quantize the radius so it doesn't wobble frame to frame.
             radius = ceilf(radius * 16.f) / 16.f;
 
