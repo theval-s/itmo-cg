@@ -39,22 +39,23 @@ add_executable(itmo_cg main.cpp
 target_include_directories(itmo_cg PRIVATE external game)
 
 # ---- Platform + graphics backend selection (the RHI seam) ----
-# Each platform provides a Display (game/platforms/) and a GraphicsDevice (game/rhi/<api>/).
+# Each platform provides a Display (game/platforms/<os>/) and a GraphicsDevice (game/rhi/<api>/).
 if(WIN32)
     target_sources(itmo_cg PRIVATE
-            game/platforms/display_win32.cpp
+            game/platforms/win32/display_win32.cpp
             game/rhi/d3d11/d3d11_device.cpp
             game/rhi/d3d11/d3d11_command_list.cpp
             game/rhi/d3d11/d3d11_state_cache.cpp
     )
     target_link_libraries(itmo_cg d3d11 dxgi d3dcompiler)
 elseif(APPLE)
-    # PLACEHOLDER — see METAL_PORT.md phase B.1
-    #   target_sources(itmo_cg PRIVATE game/platforms/display_mac.mm
-    #                                  game/rhi/metal/metal_device.cpp
-    #                                  game/rhi/metal/metal_command_list.cpp ...)
-    #   target_link_libraries(itmo_cg "-framework Metal" "-framework QuartzCore"
-    #                                 "-framework AppKit")
+    target_sources(itmo_cg PRIVATE
+            game/platforms/macos/display_mac.cpp
+            game/platforms/macos/metal_cpp.cpp
+    )
+    target_include_directories(itmo_cg PRIVATE external/metal-cpp-main external/metal-cpp-extensions)
+    target_link_libraries(itmo_cg "-framework Foundation" "-framework AppKit"
+                                  "-framework QuartzCore" "-framework Metal")
     message(FATAL_ERROR "macOS/Metal not implemented yet")
 else()
     message(FATAL_ERROR "No support")
