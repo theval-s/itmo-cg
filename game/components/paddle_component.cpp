@@ -70,19 +70,20 @@ void val_cg::PaddleComponent::Draw() {
 }
 
 void val_cg::PaddleComponent::Update(float deltaTime) {
+    auto* input = game->InputHandler();
     if (alignment == Left) {
-        if (GetAsyncKeyState(static_cast<int>(Keys::S))) {
+        if (input->IsKeyDown(Keys::S)) {
             data.offset.y = std::clamp(data.offset.y - speed * deltaTime, -1.f, 1.f);
             collider.Center.y = std::clamp(collider.Center.y - speed * deltaTime, -1.f, 1.f);
-        } else if (GetAsyncKeyState(static_cast<int>(Keys::W))) {
+        } else if (input->IsKeyDown(Keys::W)) {
             data.offset.y = std::clamp(data.offset.y + speed * deltaTime, -1.f, 1.f);
             collider.Center.y = std::clamp(collider.Center.y + speed * deltaTime, -1.f, 1.f);
         }
     } else if (alignment == Right) {
-        if (GetAsyncKeyState(static_cast<int>(Keys::Down))) {
+        if (input->IsKeyDown(Keys::Down)) {
             data.offset.y = std::clamp(data.offset.y - speed * deltaTime, -1.f, 1.f);
             collider.Center.y = std::clamp(collider.Center.y - speed * deltaTime, -1.f, 1.f);
-        } else if (GetAsyncKeyState(static_cast<int>(Keys::Up))) {
+        } else if (input->IsKeyDown(Keys::Up)) {
             data.offset.y = std::clamp(data.offset.y + speed * deltaTime, -1.f, 1.f);
             collider.Center.y = std::clamp(collider.Center.y + speed * deltaTime, -1.f, 1.f);
         }

@@ -37,13 +37,14 @@ namespace val_cg {
     }
 
     void Paddle3DComponent::Update(float deltaTime) {
+        auto* input = game->InputHandler();
         float dy = 0.f;
         if (alignment == Left) {
-            if (GetAsyncKeyState(static_cast<int>(Keys::I))) dy = speed * deltaTime;
-            if (GetAsyncKeyState(static_cast<int>(Keys::K))) dy = -speed * deltaTime;
+            if (input->IsKeyDown(Keys::I)) dy = speed * deltaTime;
+            if (input->IsKeyDown(Keys::K)) dy = -speed * deltaTime;
         } else {
-            if (GetAsyncKeyState(static_cast<int>(Keys::Up))) dy = speed * deltaTime;
-            if (GetAsyncKeyState(static_cast<int>(Keys::Down))) dy = -speed * deltaTime;
+            if (input->IsKeyDown(Keys::Up)) dy = speed * deltaTime;
+            if (input->IsKeyDown(Keys::Down)) dy = -speed * deltaTime;
         }
         position.y = std::clamp(position.y + dy, -(fieldHalfY - halfH), fieldHalfY - halfH);
         collider.Center = {position.x, position.y, position.z};
